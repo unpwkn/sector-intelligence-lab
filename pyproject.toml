@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sector-intelligence-lab"
+version = "0.1.0"
+description = "Reproducible US equity sector valuation and rotation research (educational research scaffold)."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.26,<3", "pandas>=2.1,<3"]
+
+[project.optional-dependencies]
+app = ["streamlit>=1.32,<2", "plotly>=5.22,<7"]
+dev = ["pytest>=8,<10", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
