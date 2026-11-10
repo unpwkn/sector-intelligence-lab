@@ -29,3 +29,8 @@ data/processed/
 .DS_Store
 Thumbs.db
   
+
+# Local vendor snapshots and build/scratch artifacts
+data/market/
+*.egg-info/
+work/

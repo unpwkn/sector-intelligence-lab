@@ -16,6 +16,17 @@ All records must include both the date they describe and the first time they wer
 
 For production, extend each row with provider, observation timestamp/time zone, vintage or correction ID, metric definition and licensing classification. Do not assert that a downloaded modern CSV is point-in-time simply because a row has a past date. Verify how historical snapshots were recorded by the vendor.
 
+## Phase 1 real-price snapshots
+
+Optional real-price ingestion now uses Alpha Vantage's documented premium Daily
+Adjusted API for the 11 sector ETFs and SPY. See [MARKET_DATA.md](MARKET_DATA.md)
+for reproducible commands, licensing/access limitations, validation rules and the
+v1.0 local schema. Snapshots live separately in ignored `data/market/` directories.
+They retain reported corporate actions and mark adjusted close as a proxy;
+`total_return_verified` and `point_in_time_history` are false. Retrieval timestamps
+are not historical `available_at` timestamps. These snapshots do not implement
+or replace the synthetic scoring-input contracts above.
+
 ## Suggested real-data path
 
 - Market prices: properly licensed market-data vendor, cross-checking distributions and ETF splits; benchmark and currency consistent.

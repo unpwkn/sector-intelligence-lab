@@ -2,7 +2,7 @@
 
 **A reproducible, research-first framework for US equity sector valuation and rotation.**
 
-> **Status: Research scaffold v0.1.0.** The included data are **100% synthetic**. The output is a software demonstration, **not** measured ETF mispricing, an investment signal, or a backtest. No outperformance is claimed.
+> **Status: Research scaffold v0.1.0.** The included demo data are **100% synthetic**. Phase 1 adds optional local real-price ingestion, separate from demo scoring. The output is a software demonstration, **not** measured ETF mispricing, an investment signal, or a backtest. No outperformance is claimed.
 
 ## The research question
 
@@ -61,12 +61,30 @@ The demo generator fixes the random seed and provides approximately 10 years of 
 
 **Real-data inputs:** See [`docs/DATA_POLICY.md`](docs/DATA_POLICY.md) for CSV schemas and the requirements for *true* point-in-time sourcing. The package does **not** include an unlicensed data feed or assert that web-scraped historical valuation is accurate.
 
+## Ingest real ETF prices (Phase 1)
+
+The independent ingestion module supports all 11 sector ETFs and SPY through
+Alpha Vantage's documented Daily Adjusted API. It requires a premium API key,
+validates exchange-session coverage and saves local, Git-ignored snapshots.
+Adjusted close is an **adjusted-price proxy, not verified total return**.
+
+```bash
+# Install dependencies as above; supply ALPHAVANTAGE_API_KEY via your environment.
+python scripts/ingest_market_data.py --start 2024-01-02 --end 2024-12-31 --snapshot av-2024-v1
+```
+
+See [Market data instructions and schema](docs/MARKET_DATA.md) for access, licensing,
+calendar and corporate-action limitations, reproducibility, and offline tests.
+The synthetic demo and scoring runner keep their existing inputs and behavior.
+No historical valuation or estimate-revision proxies are introduced.
+
 ## What has and has not been built
 
 - [x] Eleven-sector coverage, configurable metric weights and investor-readable classifications.
 - [x] Robust, past-only valuation transformation and no silent score imputation.
 - [x] Relative-price momentum, cross-sectional revision ranking and quality aggregation.
 - [x] Deterministic synthetic example, interactive viewer and basic unit tests.
+- [x] Modular real-price ingestion, local provenance snapshots and mocked provider tests.
 - [ ] Validated point-in-time histories of ETF holdings, estimates and sector fundamentals.
 - [ ] Constituent-level and subindustry valuation aggregation; historical relative P/E spread.
 - [ ] Data lineage and production-grade backfill/revision controls.
@@ -80,7 +98,7 @@ The demo generator fixes the random seed and provides approximately 10 years of 
 3. Adjusted price is not necessarily identical to a validated dividend-reinvested total-return index.
 4. Sector averages require careful treatment of banks, insurers, cyclicals and REITs.
 5. Cross-sector ranks are *relative rankings*, not calibrated probabilities.
-6. No live market data or empirical return claims are supplied in v0.1.
+6. Real-price ingestion is optional and requires vendor access; no downloaded data, validated total returns or empirical return claims are supplied.
 
 See [Methodology](docs/METHODOLOGY.md), [Data policy](docs/DATA_POLICY.md), and [Roadmap](docs/ROADMAP.md).
 
@@ -88,11 +106,12 @@ See [Methodology](docs/METHODOLOGY.md), [Data policy](docs/DATA_POLICY.md), and 
 
 ```text
 sector-intelligence-lab/
-  src/sectorlab/       # sector universe, factor and scoring engine
-  scripts/             # deterministic demo generator and scoring runner
+  src/sectorlab/       # sector universe, scoring engine and market_data package
+  scripts/             # demo generator, scoring runner and real-price ingestion
   tests/               # leakage, arithmetic and incomplete-data tests
   data/demo/           # synthetic demo inputs (generated)
   data/processed/      # reproducible signal output (generated)
+  data/market/         # local vendor snapshots (generated, Git-ignored)
   docs/                # methodology, sources, roadmap and resume language
   app.py               # optional Streamlit viewer
   .github/workflows/   # automated pytest checks
