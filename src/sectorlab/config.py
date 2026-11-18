@@ -15,6 +15,14 @@ SECTORS = {
 }
 BENCHMARK = "SPY"
 
+# First trading sessions, not backfilled sector/index history.
+FIRST_SESSION = dict.fromkeys(SECTORS, "1998-12-22") | {
+    "SPY": "1993-01-29",
+    "XLRE": "2015-10-08",
+    "XLC": "2018-06-19",
+}
+
+
 # Each entry: metric -> (within-sector weight, higher_is_cheap).
 # Sector-level metrics are indicative proxies only; production requires subindustry
 # decomposition for XLF/XLC/XLY/XLRE and normalized cycle assumptions for XLE/XLB.

@@ -4,22 +4,100 @@
 
 Universe: 11 Sector SPDR proxies; comparator SPY. Monthly decisions are the intended research unit, with execution no earlier than the next tradable session after data becomes available. An *as-of* snapshot includes only items whose `available_at` is no later than the timestamp of the signal. The full scoring pipeline calculates one end-of-month snapshot from synthetic data. Phase 2 also calculates retrospective price-only diagnostics from a single retrieved vendor snapshot.
 
-## Valuation V (0-100)
+## Sector Valuation Research (Phase 3)
 
-For each sector, use a specific set of economically sensible multiples or yields from `src/sectorlab/config.py` rather than a common sector-wide P/E rule. The present code consumes *already aggregated sector values* and is a prototype: it does not yet implement constituent/subindustry aggregation, cyclically normalized inputs or relative-to-SPY valuation.
+The dedicated engine consumes already aggregated, versioned ETF observations under the
+[CSV contract](VALUATION_DATA.md). The Phase 1 and 2 price workflows and the legacy synthetic
+opportunity pipeline keep their existing inputs and outputs.
 
-For each metric m at t:
+| Sector | Metric weights and preferred direction | ETF aggregation limits |
+|---|---|---|
+| XLK Technology | Forward P/E 50% ↓, FCF Yield 30% ↑, EV/EBIT 20% ↓ | Stock-based compensation, capitalized costs and concentrated weights affect cash flow and EBIT. |
+| XLC Communication Services | Forward P/E 50% ↓, FCF Yield 30% ↑, EV/EBITDA 20% ↓ | Advertising platforms, content producers and telecom differ in depreciation, leases and capital intensity. |
+| XLY Consumer Discretionary | Forward P/E 50% ↓, FCF Yield 30% ↑, EV/EBITDA 20% ↓ | Retail leases, auto captive finance and platform cash-flow profiles require consistent adjustments. |
+| XLP Consumer Staples | Forward P/E 50% ↓, FCF Yield 30% ↑, Dividend Yield 20% ↑ | Working-capital timing and payout policies influence yields. |
+| XLE Energy | Mid-cycle FCF Yield 50% ↑, EV/EBITDA 30% ↓, EV/DACF 20% ↓ | Upstream, refining and services have different cycles. Use commodity, utilization and capex assumptions known at the time and define debt-adjusted cash flow consistently. |
+| XLF Financials | P/TBV 50% ↓, Forward P/E 30% ↓, Dividend Yield 20% ↑ | Tangible common book is most useful for banks and depends on intangibles, marks and equity treatment. Insurers, brokers and fee businesses may need separate aggregation or coverage flags. |
+| XLV Health Care | Forward P/E 50% ↓, EV/EBITDA 30% ↓, FCF Yield 20% ↑ | Loss-making biotech and R&D accounting can shift which constituents enter a multiple. |
+| XLI Industrials | Mid-cycle EV/EBITDA 50% ↓, Forward P/E 30% ↓, FCF Yield 20% ↑ | Cycle, lease and balance-sheet adjustments need a stable recipe across diverse subindustries. |
+| XLB Materials | Mid-cycle EV/EBITDA 50% ↓, Mid-cycle FCF Yield 30% ↑, Forward P/E 20% ↓ | Margins and reinvestment vary by commodity, capacity and subindustry. Fix contemporaneous mid-cycle assumptions. |
+| XLRE Real Estate | P/AFFO 50% ↓, Implied Cap Rate 30% ↑, Dividend Yield 20% ↑ | REIT AFFO varies in recurring capex and lease adjustments. Cap rates require comparable property NOI and enterprise or property values. Financing and property mix matter. |
+| XLU Utilities | Forward P/E 50% ↓, Dividend Yield 30% ↑, EV/EBITDA 20% ↓ | Regulated and merchant power have different leverage, capex, depreciation and payout capacity. |
 
+ETF ratios can differ materially across weighted harmonic, ratio-of-sums and other aggregation
+methods. Concentration, loss exclusions, missing estimates and changes in historical holdings can
+drive the result. Preserve dated constituents and weights upstream and document numerator,
+denominator, constituent coverage and exclusions. Mid-cycle inputs require a specified rule and
+contemporaneous assumptions. The engine performs no constituent aggregation, denominator
+reconstruction or metric substitution.
+
+### Reference window and cutoff
+
+At each timezone-aware cutoff, first filter to vintages with `available_at <= cutoff`. Timestamp
+order is checked at import. Within each New York calendar month, take the latest visible observation
+date and, within that date, the latest available vintage. The latest available month supplies the
+current value. If it is over 45 New York calendar days old or invalid, its signal is missing.
+Earlier observations in the same month cannot replace an invalid latest print.
+
+For current observation month M, the reference is M−84 through M−1 inclusive. Count at most one
+valid observation per month, excluding all of M. Keep only the uninterrupted definition regime
+matching the selected current observation's vendor, source, fiscal basis and recipe. A change
+resets eligibility for earlier observations, including when a previous definition returns.
+Sparse months stay missing. Require 48 valid months for each normalized component.
+
+Historical charts replay each past New York calendar month end, then evaluate the exact final
+cutoff. A newly released correction can enter decisions at or after its own availability and
+cannot rewrite an earlier decision. A latest observation may be reused across cutoffs while fresh.
+Reconstructed exports can show original observation dates as raw history once the modern file is
+available. They are excluded from point-in-time scoring.
+
+### Robust Z, attractiveness and percentile
+
+```text
+median = median(valid prior values)
+MAD = median(abs(prior values - median))
+Z = (current - median) / (1.4826 × MAD)
+attractiveness_Z = clip(direction × Z, -3, 3)
+score = 50 + (50 / 3) × attractiveness_Z
+percentile = 100 × (count strictly less attractive + 0.5 × count tied) / valid prior months
 ```
-center = median(last 84 prior observations)
-mad = median(abs(prior observations - center))
-z = clip((current_value - center)/(1.4826 * mad), -3, +3)
-if lower_is_cheaper: z = -z
-metric_score = clip(50 + 15*z, 5, 95)
-V = sum(metric_score * sector_metric_weight)
-```
 
-Require at least 48 prior observations and all required within-sector metrics. Zero MAD yields missing, not a made-up neutral value. Data older than 45 calendar days are stale. The target production design is 70% historical cheapness and 30% sector-appropriate relative valuation; v0.1 implements only historical cheapness.
+Direction is +1 for higher-is-cheaper yields and −1 for lower-is-cheaper multiples. The multiplier
+scales MAD to match the standard deviation under a normal reference distribution. The raw Z is
+reported independently of the clipped score. The percentile uses empirical midranks in the
+attractiveness direction and makes no normality assumption. MAD at or below `1e-12` in submitted
+units, invalid arithmetic, missing or invalid denominators and inadequate history produce missing
+scores. All multiples require positive values and positive denominators, including positive
+forward earnings for P/E. Dividend yield may be zero. Signed FCF yield and implied cap rate
+can be measured with valid positive denominators. Upstream coverage and loss rules still apply.
+A score of 50 corresponds to the historical median. Statistical significance, market mispricing
+and return predictability require separate empirical tests.
+
+### Relative to SPY and composite
+
+Forward P/E and dividend yield are eligible only with identical vendor, product, fiscal basis and
+metric-definition identifiers, the same date and observation instant, and valid inputs available
+at the cutoff. Historical pairs use the intersection of the two comparable monthly histories.
+For forward P/E use `sector / SPY - 1` (fractional premium, lower is more attractive). For
+dividend yield use `sector - SPY` (decimal yield spread, higher is more attractive). Normalize
+each relative series against its own historical matched pairs with the same rolling rules.
+Sector-specific, capital-structure-sensitive and mid-cycle metrics are outside the benchmark
+comparison set. XLE has no eligible relative metric under this policy.
+
+The historical sector score requires all three configured metric scores and a common observation
+month. The relative sector score requires every predesignated comparable metric for the sector and
+a common observation month. It uses the original metric weights normalized over that fixed eligible
+set. Coverage gaps never change the required set. If both components exist, the blend is
+`0.70 × historical + 0.30 × relative`. Otherwise the blend is missing and any complete component
+is reported separately. The weights are research hypotheses. Published metrics with identical
+labels still require a source methodology review before relative use.
+
+### Legacy synthetic valuation V
+
+The illustrative full-factor pipeline accepts its original simple synthetic CSV. It keeps the
+84-prior-row window, 48 observation minimum, 45-day freshness convention and original
+`V = sum(weight × (50 + 15 × attractiveness_Z))` scoring scale (5–95). The research tab uses the
+calendar-window and provenance-aware engine above. Both reuse the robust transformation.
 
 ## Momentum M (0-100)
 

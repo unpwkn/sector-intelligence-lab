@@ -14,18 +14,12 @@ import exchange_calendars as xcals
 import numpy as np
 import pandas as pd
 
-from sectorlab.config import BENCHMARK, SECTORS
+from sectorlab.config import BENCHMARK, FIRST_SESSION, SECTORS
 
 from .providers import FIELDS, MarketDataProvider
 
 UNIVERSE = (*SECTORS, BENCHMARK)
 CALENDAR_LABEL = "XNYS (US equity session proxy)"
-# First trading sessions, not backfilled sector/index history.
-FIRST_SESSION = dict.fromkeys(SECTORS, "1998-12-22") | {
-    "SPY": "1993-01-29",
-    "XLRE": "2015-10-08",
-    "XLC": "2018-06-19",
-}
 
 
 class ValidationError(ValueError):

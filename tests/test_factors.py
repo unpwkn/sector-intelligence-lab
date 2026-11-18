@@ -6,7 +6,10 @@ import pytest
 
 from sectorlab.config import SECTORS
 from sectorlab.factors import (
-    classify, combine_signals, robust_value_score, valuation_scores,
+    classify,
+    combine_signals,
+    robust_value_score,
+    valuation_scores,
 )
 
 
