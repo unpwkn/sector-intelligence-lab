@@ -14,7 +14,7 @@ from sectorlab.backtest.fixture import make_fixture_snapshot
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     sources = parser.add_mutually_exclusive_group(required=True)
-    sources.add_argument("--snapshot", type=Path, help="Existing verified Phase 1 snapshot folder")
+    sources.add_argument("--snapshot", type=Path, help="Existing validated local market snapshot folder")
     sources.add_argument(
         "--fixture", action="store_true", help="Fictional offline software fixture"
     )

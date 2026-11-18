@@ -12,15 +12,18 @@ from exchange_calendars import ExchangeCalendar
 
 from sectorlab.config import BENCHMARK, FIRST_SESSION, PRICE_MOMENTUM_WEIGHTS, SECTORS
 from sectorlab.market_data import PriceSnapshot, ValidationError, load_snapshot
-from sectorlab.market_data.pipeline import UNIVERSE, _calendar
+from sectorlab.market_data.pipeline import (
+    FIXTURE_PROVIDER,  # noqa: F401 - existing fixture and dashboard imports
+    RETROSPECTIVE,  # noqa: F401 - existing research label
+    SYNTHETIC,  # noqa: F401 - existing dashboard import
+    UNIVERSE,
+    _calendar,
+)
 from sectorlab.market_data.snapshot import PRICE_BASIS
 from sectorlab.price_momentum import WINDOWS, price_momentum_history
 
 from .metrics import performance
 
-RETROSPECTIVE = "RETROSPECTIVE_ADJUSTED_PRICE_PROXY"
-SYNTHETIC = "SYNTHETIC_OFFLINE_FIXTURE"
-FIXTURE_PROVIDER = "synthetic_phase5_fixture"
 STRATEGIES = ("spy_buy_hold", "equal_weight_sectors", "top_3_momentum", "top_5_momentum")
 
 
@@ -250,7 +253,7 @@ def run_backtest(
         daily, trades, month_ends, annual_risk_free, turnover_convention
     )
     manifest = snapshot.manifest
-    classification = SYNTHETIC if manifest["provider"] == FIXTURE_PROVIDER else RETROSPECTIVE
+    classification = snapshot.research_classification
     metadata = {
         "schema_version": "1.0",
         "research_classification": classification,

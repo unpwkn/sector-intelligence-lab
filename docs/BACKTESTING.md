@@ -2,24 +2,20 @@
 
 ## Data readiness and interpretation
 
-Phase 5 runs offline on a Phase 1 snapshot. The supported real-data route is the
-[Alpha Vantage Daily Adjusted adapter](MARKET_DATA.md) with premium full-history
-entitlement. Another compatible provider can use the Phase 1 adapter contract
-with documented adjusted-close semantics and appropriate rights. The legacy
-demo prices and Phases 3–4 fundamental CSVs use separate contracts.
+Phase 5 runs offline on verified market snapshots. Import a licensed
+[local CSV export](HISTORICAL_DATA.md) or use the documented
+[Alpha Vantage Daily Adjusted adapter](MARKET_DATA.md) with premium entitlement.
+The legacy demo prices and Phases 3–4 fundamental CSVs use separate contracts.
 
-The runner verifies the manifest and hashes of the normalized prices and all
-12 raw responses through the Phase 1 reader. It checks currency, price basis,
-retrieval timestamps, positive finite adjusted closes, and observed versus
-expected sessions on the XNYS US equity calendar proxy. The run fails if
-any requested listed session is missing, including warm-up. A Phase 1 snapshot
-saved with `--allow-missing` is usable only if its recorded gaps are empty.
-Truncated coverage inside the requested bounds fails this gate. The requested
-bounds themselves determine sample coverage, and short windows can fail the
-momentum warm-up or lack an execution session. The report preserves those
-bounds, input coverage, file hashes, source retrievals, the original manifest
-hash, and the runtime package versions. Keep the original snapshot and record
-the repository revision to replay a run.
+The loader verifies the manifest and hashes of normalized prices and raw evidence.
+For CSV imports it also replays the saved raw observations. Both routes validate
+currency, price basis, retrieval timestamps, positive finite prices, and observed
+versus expected sessions on the XNYS US equity calendar proxy. The run fails if
+any requested listed session is missing, including warm-up. The requested bounds
+determine sample coverage, and short windows can fail the momentum warm-up or
+lack an execution session. The report preserves the bounds, input coverage,
+file hashes, source retrievals, manifest hash, and runtime package versions.
+Keep the original snapshot and record the repository revision to replay a run.
 
 XLC was formed on 2018-06-18 and commenced operations on 2018-06-19. XLRE was
 formed on 2015-10-07 and began trading on 2015-10-08. Phase 5 starts

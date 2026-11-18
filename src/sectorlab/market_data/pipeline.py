@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import importlib.metadata
 import json
@@ -14,12 +15,24 @@ import exchange_calendars as xcals
 import numpy as np
 import pandas as pd
 
-from sectorlab.config import BENCHMARK, FIRST_SESSION, SECTORS
+from sectorlab.config import BENCHMARK, ETF_INCEPTION, FIRST_SESSION, SECTORS
 
+from .local_csv import CSV_ENDPOINT, LocalCsv
 from .providers import FIELDS, MarketDataProvider
 
 UNIVERSE = (*SECTORS, BENCHMARK)
 CALENDAR_LABEL = "XNYS (US equity session proxy)"
+RETROSPECTIVE = "RETROSPECTIVE_ADJUSTED_PRICE_PROXY"
+SYNTHETIC = "SYNTHETIC_OFFLINE_FIXTURE"
+FIXTURE_PROVIDER = "synthetic_phase5_fixture"
+
+
+def _research_classification(manifest: dict) -> str:
+    if manifest["schema_version"] == "1.1":
+        synthetic = manifest["provenance"]["data_kind"] == "synthetic"
+    else:
+        synthetic = manifest["provider"] == FIXTURE_PROVIDER
+    return SYNTHETIC if synthetic else RETROSPECTIVE
 
 
 class ValidationError(ValueError):
@@ -121,6 +134,44 @@ def ingest(
     output is a new snapshot directory. Existing paths are never overwritten.
     The NYSE calendar is the US equity session proxy for these NYSE Arca ETFs.
     """
+    if provider.price_basis != "adjusted_price_proxy":
+        raise ValidationError("Market data requires explicit adjusted_price_proxy semantics")
+    return _publish(provider, start, end, output, allow_missing=allow_missing, now=now)
+
+
+def import_csv(
+    observations: Path,
+    provenance: Path,
+    start: str,
+    end: str,
+    output: Path,
+    *,
+    allow_missing: bool = False,
+    now: datetime | None = None,
+) -> Path:
+    """Validate a local export and preserve the original CSV and provenance bytes."""
+    try:
+        source = LocalCsv.read(Path(observations), Path(provenance))
+    except (csv.Error, ValueError, OverflowError) as exc:
+        raise ValidationError(f"Invalid local CSV input: {exc}") from exc
+    return _publish(source, start, end, output, allow_missing=allow_missing, now=now)
+
+
+def _csv_groups(source: LocalCsv) -> dict[str, pd.DataFrame]:
+    if not source.records["ticker"].isin(UNIVERSE).all():
+        raise ValidationError("CSV contains an unexpected ticker")
+    return dict(iter(source.records.groupby("ticker")))
+
+
+def _publish(
+    source: MarketDataProvider | LocalCsv,
+    start: str,
+    end: str,
+    output: Path,
+    *,
+    allow_missing: bool,
+    now: datetime | None,
+) -> Path:
     start_date, end_date = _date(start), _date(end)
     if start_date > end_date:
         raise ValidationError("start must be <= end")
@@ -128,51 +179,70 @@ def ingest(
     now_ts = pd.Timestamp(now)
     if now_ts.tzinfo is None:
         raise ValidationError("now must be timezone-aware")
-    if provider.price_basis != "adjusted_price_proxy":
-        raise ValidationError("Phase 1 requires explicit adjusted_price_proxy semantics")
     calendar = _calendar(start_date, end_date)
     sessions = calendar.sessions_in_range(start_date, end_date)
     if sessions.empty:
         raise ValidationError("Requested interval has no trading sessions")
-    if any(calendar.session_close(s) > now_ts for s in sessions):
+    last_close = calendar.session_close(sessions[-1])
+    if last_close > now_ts:
         raise ValidationError("Requested interval includes future or unclosed sessions")
     output = Path(output)
-    if output.exists():
+    if output.exists() or output.is_symlink():
         raise FileExistsError(output)
+    local = isinstance(source, LocalCsv)
+    if local:
+        groups = _csv_groups(source)
+        csv_retrieved = pd.Timestamp(source.retrieved_at)
+        if not last_close <= csv_retrieved <= now_ts:
+            raise ValidationError("CSV retrieval must fall between last session close and now")
+        provider = source.provenance["source"]
+        endpoint = CSV_ENDPOINT
+    else:
+        provider = source.name
+        endpoint = "TIME_SERIES_DAILY_ADJUSTED" if provider == "alpha_vantage" else None
+
     output.parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=".ingest-", dir=output.parent))
     frames, coverage, retrievals = [], {}, {}
     try:
         (stage / "raw").mkdir()
+        if local:
+            for name, content in source.evidence.items():
+                (stage / name).write_bytes(content)
         for ticker in UNIVERSE:
-            response = provider.fetch(ticker, start, end)
-            retrieved = pd.Timestamp(response.retrieved_at)
-            if retrieved.tzinfo is None or pd.isna(retrieved):
-                raise ValidationError("Provider retrieval timestamp must be timezone-aware")
+            if local:
+                records = groups.get(ticker, source.records.iloc[:0])
+                retrieved = csv_retrieved
+            else:
+                response = source.fetch(ticker, start, end)
+                records = response.records
+                retrieved = pd.Timestamp(response.retrieved_at)
+                if retrieved.tzinfo is None or pd.isna(retrieved):
+                    raise ValidationError("Provider retrieval timestamp must be timezone-aware")
+                (stage / "raw" / f"{ticker}.json").write_text(
+                    json.dumps(response.raw, sort_keys=True, allow_nan=False) + "\n"
+                )
             frame, coverage[ticker] = validate(
-                response.records, ticker, sessions, allow_missing=allow_missing
+                records, ticker, sessions, allow_missing=allow_missing
             )
             frame["date"] = frame["date"].dt.strftime("%Y-%m-%d")
             retrievals[ticker] = retrieved.isoformat()
             frame["retrieved_at"] = retrieved.isoformat()
-            frame["provider"] = provider.name
+            frame["provider"] = provider
             frame["currency"] = "USD"
             frame["price_basis"] = "adjusted_price_proxy"
             frame["total_return_verified"] = False
             if not frame.empty:
                 frames.append(frame)
-            (stage / "raw" / f"{ticker}.json").write_text(
-                json.dumps(response.raw, sort_keys=True, allow_nan=False) + "\n"
-            )
         if not frames:
             raise ValidationError("No observations in requested universe/interval")
         combined = pd.concat(frames, ignore_index=True).sort_values(["date", "ticker"])
         combined.to_csv(stage / "prices.csv", index=False)
         files = sorted(p for p in stage.rglob("*") if p.is_file())
         manifest = {
-            "schema_version": "1.0",
-            "provider": provider.name,
-            "endpoint": "TIME_SERIES_DAILY_ADJUSTED" if provider.name == "alpha_vantage" else None,
+            "schema_version": "1.1" if local else "1.0",
+            "provider": provider,
+            "endpoint": endpoint,
             "start": str(start_date.date()),
             "end": str(end_date.date()),
             "universe": list(UNIVERSE),
@@ -188,11 +258,18 @@ def ingest(
                 p: importlib.metadata.version(p) for p in ("pandas", "numpy", "exchange-calendars")
             },
             "sha256": {
-                str(p.relative_to(stage)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files
+                p.relative_to(stage).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in files
             },
         }
+        if local:
+            manifest["provenance"] = source.provenance
+            manifest["fund_inception"] = ETF_INCEPTION
+        manifest["research_classification"] = _research_classification(manifest)
         (stage / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
         # rename within the same filesystem; no partially populated snapshot exposed.
+        if output.exists() or output.is_symlink():
+            raise FileExistsError(output)
         stage.rename(output)
     except BaseException:
         shutil.rmtree(stage, ignore_errors=True)
