@@ -86,6 +86,14 @@ Both routes save Git-ignored snapshots under `data/market/`. See the
 [Alpha Vantage instructions](docs/MARKET_DATA.md). Phase 6A verified the workflow
 with fictional prices. Real coverage remains unverified pending a licensed export.
 
+### Capture private IBKR history (Phase 6B)
+
+Run the [local TWS or IB Gateway preflight](docs/IBKR_HISTORY.md) with the socket
+API in read-only mode. Capture `TRADES` and `ADJUSTED_LAST` for the 11 sector ETFs
+and SPY, inspect coverage, and replay the archive offline. A Phase 6A export
+requires independently sourced as-traded OHLCV and reconciled corporate actions.
+Keep licensed inputs, snapshots and reports outside the checkout and public cloud.
+
 ## Run Price Momentum Research (Phase 2)
 
 Place an intact market snapshot under `data/market/`. Start the app with
