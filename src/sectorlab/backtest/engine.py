@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.metadata
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -23,6 +24,9 @@ from sectorlab.market_data.snapshot import PRICE_BASIS
 from sectorlab.price_momentum import WINDOWS, price_momentum_history
 
 from .metrics import performance
+
+if TYPE_CHECKING:
+    from sectorlab.market_data.price_only import PriceOnlySnapshot
 
 STRATEGIES = ("spy_buy_hold", "equal_weight_sectors", "top_3_momentum", "top_5_momentum")
 
@@ -60,7 +64,7 @@ class BacktestResult:
     rolling_12m: pd.DataFrame
 
 
-def _check_coverage(snapshot: PriceSnapshot) -> None:
+def _check_coverage(snapshot: PriceSnapshot | PriceOnlySnapshot) -> None:
     # Phase 1 permits explicitly recorded gaps. A performance path cannot bridge them.
     gaps = [
         f"{ticker}: {len(dates)} missing (first {dates[0]})"
@@ -83,7 +87,7 @@ def _month_ends(sessions: pd.DatetimeIndex) -> tuple[ExchangeCalendar, pd.Dateti
 
 
 def _decision_log(
-    snapshot: PriceSnapshot,
+    snapshot: PriceSnapshot | PriceOnlySnapshot,
     month_ends: pd.DatetimeIndex,
     calendar: ExchangeCalendar,
     universe: str,
@@ -147,7 +151,7 @@ def _rebalance(
 
 
 def _simulate(
-    snapshot: PriceSnapshot,
+    snapshot: PriceSnapshot | PriceOnlySnapshot,
     scheduled: pd.DataFrame,
     costs: CostAssumptions,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -228,7 +232,7 @@ def run_backtest(
     annual_risk_free: float = 0.0,
     turnover_convention: str = "half_l1",
 ) -> BacktestResult:
-    """Run one universe policy, using only the verified saved snapshot as input."""
+    """Run one universe policy using the strict saved snapshot contract."""
     if universe not in {"common", "dynamic"}:
         raise ValueError("Universe must be common or dynamic")
     if turnover_convention not in {"half_l1", "etf_notional"}:
@@ -236,7 +240,21 @@ def run_backtest(
     if not np.isfinite(annual_risk_free) or annual_risk_free <= -1:
         raise ValueError("Annual risk-free rate must be finite and greater than -1")
 
-    snapshot = load_snapshot(snapshot_path)
+    return _run_validated_backtest(
+        load_snapshot(snapshot_path), universe=universe, costs=costs,
+        annual_risk_free=annual_risk_free, turnover_convention=turnover_convention,
+    )
+
+
+def _run_validated_backtest(
+    snapshot: PriceSnapshot | PriceOnlySnapshot,
+    *,
+    universe: str,
+    costs: CostAssumptions,
+    annual_risk_free: float = 0.0,
+    turnover_convention: str = "half_l1",
+) -> BacktestResult:
+    """Shared strategy implementation. Each caller owns its snapshot validation."""
     _check_coverage(snapshot)
     calendar, month_ends = _month_ends(snapshot.sessions)
     if month_ends.empty:
@@ -280,9 +298,16 @@ def run_backtest(
         "baseline_session": scheduled["signal_date"].min().strftime("%Y-%m-%d"),
         "last_session": snapshot.sessions[-1].strftime("%Y-%m-%d"),
     }
+    classifications = ("data_assurance", "empirical_claim_status")
+    for key in classifications:
+        if key in manifest:
+            metadata[key] = manifest[key]
     for frame in (decisions, trades, daily, metrics, monthly, rolling):
         frame.insert(0, "research_classification", classification)
         frame.insert(1, "universe_policy", universe)
+        for key in classifications:
+            if key in metadata:
+                frame[key] = metadata[key]
         if "snapshot_manifest_sha256" not in frame:
             frame.insert(2, "snapshot_manifest_sha256", snapshot.manifest_sha256)
     return BacktestResult(metadata, decisions, trades, daily, metrics, monthly, rolling)

@@ -169,6 +169,22 @@ saved snapshot. Real-price runs carry the `RETROSPECTIVE_ADJUSTED_PRICE_PROXY`
 label. Historical point-in-time availability and total returns remain unverified. The Streamlit **Sector Rotation Backtest** tab
 runs the same comparison on saved local snapshots. See [Phase 5 backtesting](docs/BACKTESTING.md).
 
+## Phase 6C Price-only Exploratory Research
+
+Use the [price-only import and Report #001 workflow](docs/PRICE_ONLY_RESEARCH.md)
+with a licensed daily adjusted-close panel or a verified local IBKR TWS
+`ADJUSTED_LAST` capture. The separate research route reuses the Phase 2 signal
+and Phase 5 strategies. Reports show their retrospective, unreconciled data
+classification and include common and dynamic universe, transaction cost, and
+forward-return diagnostics.
+
+Generate the [evidence-pending report template](reports/report-001/README.md)
+without market data.
+
+```bash
+python scripts/price_only_research.py report --template --output work/report-001-template
+```
+
 ## What has and has not been built
 
 - [x] Eleven-sector coverage, configurable metric weights and investor-readable classifications.
