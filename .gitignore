@@ -35,3 +35,4 @@ data/market/
 data/valuation/
 *.egg-info/
 work/
+data/earnings_quality/

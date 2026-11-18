@@ -218,3 +218,109 @@ A complete input set is marked `INPUTS_COMPLETE_UNVALIDATED`: completeness must 
 - Real-data ingestion with explicit license/compliance checks.
 - Benchmark-relative valuation adjustment with suitable peer comparison.
 - Calendar alignment across equity, estimates, cash flows and macro regimes.
+
+## Earnings Revision and Fundamental Quality Research (Phase 4)
+
+Both engines consume the [Phase 4 CSV contract](EARNINGS_QUALITY_DATA.md). See the
+[source review](PHASE4_FEASIBILITY.md) for access, timestamp evidence and licensing.
+
+### Historical universe and coverage
+
+Select the latest known full ETF NAV snapshot at the signal instant, with a maximum
+age of 35 calendar days measured in New York. A snapshot becomes usable only at
+its first availability timestamp. Aggregate issuers by historical NAV weight,
+accounting for cash, unsupported companies, missing observations and invalid records
+in the coverage denominator. Each pillar or revision component reports its own
+usable weight and available-subset mean once 80% of NAV is covered. The composite
+requires 80% coverage on the **intersection** of all three components. Its inputs
+are weighted means over that same intersection, divided by its observed weight.
+The results are covered-portfolio research statistics and depend on which issuers
+are covered. A delayed quarterly holdings file may be too old when released.
+
+### Earnings Revision Score
+
+For each signal, compare estimates for a fixed 12-month calendar window beginning
+on the next New York calendar date. The 1M and 3M cutoffs subtract calendar months
+in UTC, clipping month-end as needed. For each analyst, select only vintages
+visible at the respective cutoff; observations older than 120 calendar days are
+stale. The engine requires valid fiscal-quarter estimates to cover the entire
+target with no overlap or gap and prorates partial quarters by days. The same exact
+fiscal intervals and per-share basis must exist at both cutoffs. Calendarization
+assumes earnings are earned uniformly within each quarter, with potential seasonal
+distortion. Quarterly future coverage may be sparse at earlier cutoffs.
+
+Use at least three matched analysts per issuer and horizon and take equal-weight
+means of their calendarized EPS at both endpoints. Require a single comparable
+fiscal schedule and share basis among matched analysts. The raw revision is
+`(new − old) / max(|new|, |old|, USD 0.25)`. It preserves loss narrowing and
+loss widening direction, handles zero and is bounded to ±2. It is a scaled
+change, with sector differences in share denominations and coverage mix still
+relevant. Analysts can differ across 1M and 3M comparisons.
+
+Recommendation breadth uses the 3M endpoints and at least three matched analysts
+with valid ratings at both cutoffs, at most 180 days old at each cutoff. Count
+one vote per upgrade (+1), downgrade (−1) or unchanged rating (0) and divide by
+matched analysts. This captures net endpoint changes and can miss moves that
+reversed within the interval. An unchanged analyst counts in the denominator.
+Ratings breadth measures changes in investment recommendations.
+
+On the jointly covered sector set, rank each component from 0 to 100 using
+`100 × (average_rank − 1) / (peers − 1)`, with at least two eligible sectors.
+Combine **3M EPS revision 45%**, **1M EPS revision 30%**, and **recommendation
+breadth 25%**. Peer turnover can change the relative score even if raw inputs
+are constant. A vendor launch, a delisting, or an analyst departure can change
+matched coverage. The engine uses the latest visible observation and its latest
+visible correction, without falling back to earlier valid rows after withdrawal.
+
+### Fundamental Quality Score
+
+Use a coherent trailing-year fiscal anchor per issuer for all selected metrics,
+at most 185 calendar days old. Select the most recent visible anchor and the
+latest visible observation/correction for each metric. Incomplete recent anchors,
+nonpositive denominators, unsupported activities and stale operands reduce
+coverage. Each metric transforms a valid ratio to 0–100 using clipped linear
+interpolation between fixed weak and strong anchors. A pillar averages all its
+configured metrics with equal weight. Combine **Profitability 40%**,
+**Financial Strength 35%** and **Growth Durability 25%**. Durability uses retained
+margins, cash generation, volumes proxied by real revenue/premiums, or contracted
+backlog as specified. It does not estimate forward growth rates.
+
+The [versioned registry](../src/sectorlab/fundamental_research/quality_definitions.py)
+contains the measurements and anchors. The following examples describe why issuer
+classification matters.
+
+| ETF | Subindustry distinctions |
+| --- | --- |
+| XLK | Software and hardware use ROIC and cash flow after capex and stock compensation. Hardware financing and margin floors differ from software. Semiconductors also use five-year capital efficiency and cash generation. |
+| XLC | Telecom emphasizes recurring demand and capex funding. Platform businesses emphasize capital returns, and media emphasizes cash generation. |
+| XLY | Retail emphasizes operating capital returns and recurring demand. Auto production uses multi-year cycle inputs and needs consistent treatment of financing subsidiaries. |
+| XLP | Producers use gross margin and capital returns. Retail uses capital returns and demand, where thinner margins can be structural. |
+| XLE | Upstream, integrated, refining and services models use five-year realized NOPAT and capital plus cycle-normalized leverage. Midstream emphasizes distributable cash coverage and leverage. Five realized years can still miss a full cycle. |
+| XLF | Banks use ROTCE, CET1, nonperforming loans and pre-provision earnings. Insurers require regulatory capital and premium retention, with underwriting measured by combined ratios in P&C. Fee-based asset managers use operating measures. Broker-dealers with material trading balance sheets need their own model. |
+| XLV | Commercial biopharma uses R&D funding and margin durability. Devices and providers use operating returns or cash flow measures. Pre-revenue biotech and risk-bearing managed care should remain unmapped until supported. |
+| XLI | Funded contract backlog applies to appropriate contract businesses. Transportation is normalized across cycles, and commercial industrials use operating returns and margins. |
+| XLB | Commodity businesses use five-year returns and leverage. Specialty materials emphasize gross-margin durability. |
+| XLRE | Equity REITs use normalized AFFO dividend coverage, 24-month debt maturities and a refinancing-gap proxy. Property services use operating measures. Same-property NOI needs a consistently matched pool. Mortgage REITs lack a model. |
+| XLU | Regulated utilities emphasize regulated earnings share and durability, cash flow to debt and dividends. Merchant generation uses cycle-normalized operating measures. |
+
+For upstream metric construction, use comparable definitions throughout each
+issuer series. Normalize AFFO to Nareit FFO less recurring maintenance capex,
+recurring leasing/tenant-improvement cash costs and noncash straight-line rent
+adjustments, with explicit reconciliation and no double count. Net debt uses gross
+interest-bearing debt less unrestricted cash. Define NOPAT as operating income
+after operating tax and operating invested capital as operating assets less
+non-interest-bearing operating liabilities; preserve scope (including goodwill
+and lease conventions) and use the mean of beginning/end capital. For real
+revenue/premiums use constant dollars with a common vintage deflator and matched
+fiscal periods. Multi-year operands use completed fiscal years visible at the
+trailing anchor release. Inapplicable measures and incoherent segment mappings
+remain uncovered. The fixed anchors are research assumptions. Scores aggregate
+normalized issuer indicators across distinct business models and are sensitive to
+coverage, capital structure, accounting and historical industry mix.
+
+### Model separation
+
+Phase 4 publishes standalone E and Q results. Price Momentum and Sector Valuation
+retain their independent workflows. The real-data Opportunity Score remains
+inactive, and the existing synthetic demo remains separately labeled. Empirical
+predictive power remains untested.

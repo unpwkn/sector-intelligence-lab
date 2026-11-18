@@ -19,6 +19,15 @@ Use the app on a trusted local machine for private files. Shared deployments and
 derived outputs require applicable rights. The repository ships the schema and an explicitly
 synthetic fixture generator.
 
+## Earnings Revision and Fundamental Quality (Phase 4)
+
+Use the independent [Phase 4 import contract](EARNINGS_QUALITY_DATA.md) for
+historical holdings, analyst observations and versioned financial ratios.
+The bundle records observation, original publication, first availability, vendor,
+metric, provenance and audit references. Keep private files in ignored
+`data/earnings_quality/`. The app distinguishes synthetic and importer-declared
+PIT sources. See the [Phase 4 feasibility review](PHASE4_FEASIBILITY.md).
+
 ## Legacy full scoring pipeline CSV contracts
 
 All records must include both the date they describe and the first time they were available for investment decisions (`available_at`). Only `available_at <= signal_date` may enter a signal. The current implementation uses date-level rather than intraday time-level gating and is not execution-ready.

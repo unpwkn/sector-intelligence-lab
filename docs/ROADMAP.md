@@ -29,6 +29,15 @@
 - [x] [Source feasibility and licensing review](DATA_FEASIBILITY.md).
 - [ ] Audit real exports and test constituent coverage, denominator construction and paired SPY data.
 
+## Phase 4 — Earnings Revision and Fundamental Quality
+
+- [x] [Historical source feasibility, timestamp evidence and licensing review](PHASE4_FEASIBILITY.md).
+- [x] Independent vintage-aware revision and sector-specific quality research.
+- [x] [Validated CSV contract](EARNINGS_QUALITY_DATA.md), deterministic fixtures and coverage views.
+- [ ] Obtain and audit entitled detail-level EPS, recommendation and ETF holdings vintages.
+- [ ] Audit as-filed financial operands and refine models for uncovered subindustries.
+- [ ] Measure issuer and portfolio coverage on sourced vintages before empirical testing.
+
 ## Future institutional data research
 
 - [ ] PIT holdings and analyst EPS estimate histories.
