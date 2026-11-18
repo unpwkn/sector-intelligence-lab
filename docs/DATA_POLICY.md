@@ -4,7 +4,7 @@
 
 The `make_demo_data.py` generator writes fictional price, valuation, breadth, quality and estimate-revision values. They may resemble market-like series, but they **are not observations from the securities named in the project**. The names, dates and tickers are for software testing only. No portfolio-performance charts, investor-facing results, fair-value conclusions or alpha claims may be drawn from them.
 
-## Input CSV contracts
+## Full scoring pipeline CSV contracts
 
 All records must include both the date they describe and the first time they were available for investment decisions (`available_at`). Only `available_at <= signal_date` may enter a signal. The current implementation uses date-level rather than intraday time-level gating and is not execution-ready.
 
@@ -16,7 +16,7 @@ All records must include both the date they describe and the first time they wer
 
 For production, extend each row with provider, observation timestamp/time zone, vintage or correction ID, metric definition and licensing classification. Do not assert that a downloaded modern CSV is point-in-time simply because a row has a past date. Verify how historical snapshots were recorded by the vendor.
 
-## Phase 1 real-price snapshots
+## ETF snapshots and price research
 
 Optional real-price ingestion now uses Alpha Vantage's documented premium Daily
 Adjusted API for the 11 sector ETFs and SPY. See [MARKET_DATA.md](MARKET_DATA.md)
@@ -24,8 +24,10 @@ for reproducible commands, licensing/access limitations, validation rules and th
 v1.0 local schema. Snapshots live separately in ignored `data/market/` directories.
 They retain reported corporate actions and mark adjusted close as a proxy;
 `total_return_verified` and `point_in_time_history` are false. Retrieval timestamps
-are not historical `available_at` timestamps. These snapshots do not implement
-or replace the synthetic scoring-input contracts above.
+are not historical `available_at` timestamps. Price Momentum Research verifies
+these local snapshots and uses their normalized adjusted-price proxies for
+retrospective sector-to-SPY diagnostics. The research tab reports price-derived
+metrics. The synthetic demo uses the full scoring contracts above.
 
 ## Suggested real-data path
 

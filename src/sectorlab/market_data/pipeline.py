@@ -19,6 +19,7 @@ from sectorlab.config import BENCHMARK, SECTORS
 from .providers import FIELDS, MarketDataProvider
 
 UNIVERSE = (*SECTORS, BENCHMARK)
+CALENDAR_LABEL = "XNYS (US equity session proxy)"
 # First trading sessions, not backfilled sector/index history.
 FIRST_SESSION = dict.fromkeys(SECTORS, "1998-12-22") | {
     "SPY": "1993-01-29",
@@ -58,7 +59,7 @@ def validate(
     if not set(FIELDS).issubset(records.columns):
         raise ValidationError(f"Missing price columns for {ticker}")
     data = records[FIELDS].copy()
-    data["date"] = data["date"].map(_date)
+    data["date"] = pd.to_datetime(data["date"].map(_date))
     if not data["ticker"].eq(ticker).all():
         raise ValidationError(f"Unexpected symbol in {ticker}")
     expected = sessions[sessions >= pd.Timestamp(FIRST_SESSION[ticker])]
@@ -106,6 +107,12 @@ def validate(
     }
 
 
+def _calendar(start: pd.Timestamp, end: pd.Timestamp) -> xcals.ExchangeCalendar:
+    return xcals.get_calendar(
+        "XNYS", start=start - pd.Timedelta(days=10), end=end + pd.Timedelta(days=10)
+    )
+
+
 def ingest(
     provider: MarketDataProvider,
     start: str,
@@ -129,9 +136,7 @@ def ingest(
         raise ValidationError("now must be timezone-aware")
     if provider.price_basis != "adjusted_price_proxy":
         raise ValidationError("Phase 1 requires explicit adjusted_price_proxy semantics")
-    calendar = xcals.get_calendar(
-        "XNYS", start=start_date - pd.Timedelta(days=10), end=end_date + pd.Timedelta(days=10)
-    )
+    calendar = _calendar(start_date, end_date)
     sessions = calendar.sessions_in_range(start_date, end_date)
     if sessions.empty:
         raise ValidationError("Requested interval has no trading sessions")
@@ -160,13 +165,14 @@ def ingest(
             frame["currency"] = "USD"
             frame["price_basis"] = "adjusted_price_proxy"
             frame["total_return_verified"] = False
-            frames.append(frame)
+            if not frame.empty:
+                frames.append(frame)
             (stage / "raw" / f"{ticker}.json").write_text(
                 json.dumps(response.raw, sort_keys=True, allow_nan=False) + "\n"
             )
-        combined = pd.concat(frames, ignore_index=True).sort_values(["date", "ticker"])
-        if combined.empty:
+        if not frames:
             raise ValidationError("No observations in requested universe/interval")
+        combined = pd.concat(frames, ignore_index=True).sort_values(["date", "ticker"])
         combined.to_csv(stage / "prices.csv", index=False)
         files = sorted(p for p in stage.rglob("*") if p.is_file())
         manifest = {
@@ -176,7 +182,7 @@ def ingest(
             "start": str(start_date.date()),
             "end": str(end_date.date()),
             "universe": list(UNIVERSE),
-            "calendar": "XNYS (US equity session proxy)",
+            "calendar": CALENDAR_LABEL,
             "price_basis": "adjusted_price_proxy",
             "total_return_verified": False,
             "point_in_time_history": False,

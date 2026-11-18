@@ -1,8 +1,7 @@
 # Phase 1: real ETF price ingestion
 
-Phase 1 is an independent price-data path. It does not change the factor engine,
-synthetic demo, dashboard, valuation, estimates, quality or breadth inputs. Downloaded
-prices alone cannot produce a complete real-data opportunity/rotation score.
+Phase 1 builds the local ETF price snapshots that feed Phase 2 Price Momentum
+Research. The synthetic demo uses its own prices and fundamental inputs.
 
 ## Source and access
 
@@ -47,15 +46,15 @@ pip install -e ".[dev]"
 # Supply ALPHAVANTAGE_API_KEY through your shell or secret manager.
 # Do not put the real key in a script, command committed to Git, or a PR.
 python scripts/ingest_market_data.py \
-  --start 2024-01-02 --end 2024-12-31 --snapshot av-2024-v1
+  --start 2023-01-03 --end 2024-12-31 --snapshot av-2023-2024-v1
 pytest -q
 ```
 
-The output is `data/market/av-2024-v1/`. `--snapshot` accepts a single directory
+The output is `data/market/av-2023-2024-v1/`. `--snapshot` accepts a single directory
 name only. Existing snapshots cannot be overwritten: use a new name for a new
 retrieval. `--start` and `--end` are inclusive `YYYY-MM-DD` session-date bounds.
 Keep the manifest, raw files and normalized CSV together. Record your environment
-with `pip freeze > data/market/av-2024-v1/environment.txt` if an exact dependency
+with `pip freeze > data/market/av-2023-2024-v1/environment.txt` if an exact dependency
 lock is needed; core numerical/calendar versions are already in the manifest.
 A fresh API call may produce different values after vendor corrections. The saved
 raw response plus hashes is the evidence for a specific retrieval; matching dates
@@ -154,6 +153,31 @@ package versions, and SHA-256 hashes of `prices.csv` and every raw response.
 `point_in_time_history` and `total_return_verified` are explicitly false. Raw
 responses retain the full vendor history, not only the normalized requested range;
 this can consume disk space and remains subject to vendor licensing.
+
+## Phase 2 snapshot checks and reproduction
+
+`sectorlab.market_data.load_snapshot(path)` requires the v1.0 manifest and the
+complete set of checksummed files. It verifies SHA-256 for the normalized CSV
+and every raw JSON response, reads the normalized data from the verified bytes,
+and checks schema, universe, currency, price basis, retrieval metadata, and
+per-ticker coverage against the XNYS session grid. The raw files stay with the
+snapshot as evidence. Their verified hashes establish integrity relative to the
+manifest. Verification does not authenticate the manifest or certify vendor
+price accuracy or raw-to-normalized economic equivalence.
+
+Keep the manifest hash, recorded package versions, and snapshot files for
+reproduction. Install the recorded versions of pandas, NumPy and
+exchange-calendars when reproducing a run. Calendar corrections across versions
+can affect coverage checks or session alignment. The dashboard shows the provider,
+retrievals, coverage, manifest hash, and adjusted-price proxy semantics.
+
+Phase 2 reads only the normalized price series for calculations. When you choose
+an earlier date, the engine limits observations and ranks to that cutoff.
+`retrieved_at` records the source vintage and is never converted into historical
+`available_at`. The historical charts describe the saved vintage. A later
+download may revise past values, and no backtest or live-data validation is
+implied. See the [README](../README.md#run-price-momentum-research-phase-2) for
+offline code and dashboard examples.
 
 ## Extension and tests
 

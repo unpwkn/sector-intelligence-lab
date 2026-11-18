@@ -34,6 +34,7 @@ VALUATION_METRICS = {
 
 OPPORTUNITY_WEIGHTS = {"valuation": .40, "momentum": .25, "revision": .20, "quality": .15}
 MOMENTUM_WEIGHTS = {"rs_6_1": .35, "rs_12_1": .35, "rs_3m": .15, "breadth": .15}
+PRICE_MOMENTUM_WEIGHTS = {"rs_6_1": .40, "rs_12_1": .40, "rs_3m": .20}
 REVISION_WEIGHTS = {"revision_3m": .45, "revision_1m": .30, "revision_breadth": .25}
 QUALITY_WEIGHTS = {"profitability": .40, "financial_strength": .35, "growth_durability": .25}
 
