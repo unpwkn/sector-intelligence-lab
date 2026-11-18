@@ -47,6 +47,7 @@ flowchart TD
     G --> I[Future: point-in-time backtests]
     J[Verified local ETF price snapshots] --> K[XNYS-aligned price-only relative momentum]
     K --> H
+    K --> L[Phase 5 sector rotation comparison]
 ```
 
 ## Run the synthetic demo
@@ -141,6 +142,20 @@ coverage and expose missing inputs. The real-data Opportunity Score remains inac
 - [Phase 4 CSV contract and offline API](docs/EARNINGS_QUALITY_DATA.md)
 - [Phase 4 methodology and limitations](docs/METHODOLOGY.md#earnings-revision-and-fundamental-quality-research-phase-4)
 
+## Run sector rotation backtests (Phase 5)
+
+```bash
+python scripts/run_backtest.py --fixture --output work/phase5-common
+```
+
+Phase 5 compares SPY buy and hold, equal-weight sectors, and the Phase 2 top-three
+and top-five portfolios. It validates local price snapshots and exports signals,
+next-session-close trades, gross and net returns, and aligned performance metrics.
+The default research universe requires all 11 sectors to be eligible. Real
+Phase 1 snapshots carry the `RETROSPECTIVE_ADJUSTED_PRICE_PROXY` label, and the
+offline fixture is fictional. The Streamlit **Sector Rotation Backtest** tab
+runs the same comparison on saved local snapshots. See [Phase 5 backtesting](docs/BACKTESTING.md).
+
 ## What has and has not been built
 
 - [x] Eleven-sector coverage, configurable metric weights and investor-readable classifications.
@@ -153,7 +168,8 @@ coverage and expose missing inputs. The real-data Opportunity Score remains inac
 - [x] Valuation CSV import, provenance and replay, sector-specific scores and comparable SPY premiums.
 - [ ] Constituent-level and subindustry valuation aggregation.
 - [ ] Data lineage and production-grade backfill/revision controls.
-- [ ] Leakage-free walk-forward 3/6/12-month excess-return backtests, costs and robustness checks.
+- [x] Retrospective ETF rotation simulator with next-session execution and configurable costs.
+- [ ] Validated PIT backtests, forward excess-return tests and robustness checks.
 - [ ] Deployed public live-data dashboard and a research findings page.
 
 ## Limitations that matter

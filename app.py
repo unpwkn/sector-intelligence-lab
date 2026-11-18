@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from sectorlab.backtest.dashboard import show_backtest_research
 from sectorlab.config import SECTORS
 from sectorlab.fundamental_research.dashboard import show_fundamental_research
 from sectorlab.market_data import ValidationError, load_snapshot
@@ -158,8 +159,9 @@ def show_price_research() -> None:
 
 st.set_page_config(page_title="Sector Intelligence Lab", page_icon="📊", layout="wide")
 st.title("Sector Intelligence Lab")
-price_tab, valuation_tab, fundamental_tab, demo_tab = st.tabs([
-    "Price Momentum Research", "Sector Valuation Research", "Earnings and Quality", "Synthetic Demo",
+price_tab, valuation_tab, fundamental_tab, backtest_tab, demo_tab = st.tabs([
+    "Price Momentum Research", "Sector Valuation Research", "Earnings and Quality",
+    "Sector Rotation Backtest", "Synthetic Demo",
 ])
 with price_tab:
     show_price_research()
@@ -167,5 +169,7 @@ with valuation_tab:
     show_valuation_research()
 with fundamental_tab:
     show_fundamental_research(ROOT / "data" / "earnings_quality")
+with backtest_tab:
+    show_backtest_research(MARKET)
 with demo_tab:
     show_synthetic_demo()

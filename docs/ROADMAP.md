@@ -38,6 +38,14 @@
 - [ ] Audit as-filed financial operands and refine models for uncovered subindustries.
 - [ ] Measure issuer and portfolio coverage on sourced vintages before empirical testing.
 
+## Phase 5 — Sector ETF rotation
+
+- [x] [Snapshot readiness gate and retrospective comparison](BACKTESTING.md) with the Phase 2 score.
+- [x] Common and dynamic universe runs, next-session execution, costs and aligned metrics.
+- [x] Offline validation fixture and trade-level audit exports.
+- [ ] Audit licensed data and reconcile corporate actions and benchmark returns.
+- [ ] Obtain historical price vintages and verify historical availability for PIT claims.
+
 ## Future institutional data research
 
 - [ ] PIT holdings and analyst EPS estimate histories.
@@ -50,7 +58,6 @@
 - [ ] Pre-register hypotheses and compare simple baselines.
 - [ ] 3/6/12M forward excess-return tests; rank IC and confidence intervals.
 - [ ] Chronological walk-forward, no peeking and embargo for overlapping labels.
-- [ ] Portfolio turnover and cost simulation with next-session execution.
 - [ ] Robustness to momentum horizons, valuation windows and regime shifts.
 - [ ] Publish both positive and negative/insignificant findings.
 
