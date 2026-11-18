@@ -56,6 +56,9 @@ Sources include State Street's [sector fund summary](https://www.ssga.com/librar
 [SPY inception and listing history](https://www.ssga.com/us/en/intermediary/insights/how-spy-reinvented-investing-story-of-first-us-etf),
 and the [historical SPY first-session record](https://stockspricehistory.com/quotes/SPY/history/1993-01-29).
 
+Phase 6B provides a [private IBKR capture and reconciliation workflow](IBKR_HISTORY.md)
+that can generate this CSV contract from independently reconciled evidence.
+
 ## Import and replay
 
 1. Save licensed source files, their checksums, the retrieval/export recipe, and

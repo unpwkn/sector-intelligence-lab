@@ -55,6 +55,11 @@ record the acquired vintage. Price Momentum Research and Phase 5 read the verifi
 local snapshots for retrospective price-only research. The synthetic demo uses the
 full scoring contracts above.
 
+Phase 6B [IBKR archives](IBKR_HISTORY.md) belong on authorized private storage
+outside the checkout. Confirm applicable IBKR, exchange, and reference-source
+rights for API use, retention, professional research and publication of derived
+outputs. Keep account/session data and licensed prices out of GitHub and public cloud.
+
 ## Suggested real-data path
 
 - Market prices: properly licensed market-data vendor, cross-checking distributions and ETF splits; benchmark and currency consistent.
