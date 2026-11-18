@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
 
@@ -10,12 +12,15 @@ from .market_data import PriceSnapshot
 from .market_data.pipeline import FIRST_SESSION, UNIVERSE, _date
 from .market_data.snapshot import PRICE_BASIS
 
+if TYPE_CHECKING:
+    from .market_data.price_only import PriceOnlySnapshot
+
 # Offsets in XNYS sessions, inclusive endpoints.
 WINDOWS = {"rs_6_1": (126, 21), "rs_12_1": (252, 21), "rs_3m": (63, 0)}
 
 
 def price_momentum_history(
-    snapshot: PriceSnapshot, *, asof: str | None = None
+    snapshot: PriceSnapshot | PriceOnlySnapshot, *, asof: str | None = None
 ) -> pd.DataFrame:
     """Return one row per session/sector up to the inclusive session-date cutoff.
 

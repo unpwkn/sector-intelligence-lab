@@ -60,6 +60,11 @@ outside the checkout. Confirm applicable IBKR, exchange, and reference-source
 rights for API use, retention, professional research and publication of derived
 outputs. Keep account/session data and licensed prices out of GitHub and public cloud.
 
+Phase 6C [price-only research](PRICE_ONLY_RESEARCH.md) uses a separate snapshot
+contract and labels the adjusted-price vintage as exploratory and unreconciled.
+Keep its sources, snapshots, reports and dashboard on authorized private storage.
+Confirm vendor permissions for research use and publication of derived results.
+
 ## Suggested real-data path
 
 - Market prices: properly licensed market-data vendor, cross-checking distributions and ETF splits; benchmark and currency consistent.

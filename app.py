@@ -1,5 +1,6 @@
 """Read-only Streamlit viewer for the synthetic demo and local price research."""
 
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -12,6 +13,7 @@ from sectorlab.fundamental_research.dashboard import show_fundamental_research
 from sectorlab.market_data import ValidationError, load_snapshot
 from sectorlab.market_data.pipeline import SYNTHETIC
 from sectorlab.price_momentum import price_momentum_history
+from sectorlab.price_research.dashboard import show_price_only_research
 from sectorlab.valuation_dashboard import show_valuation_research
 
 ROOT = Path(__file__).resolve().parent
@@ -164,9 +166,9 @@ def show_price_research() -> None:
 
 st.set_page_config(page_title="Sector Intelligence Lab", page_icon="📊", layout="wide")
 st.title("Sector Intelligence Lab")
-price_tab, valuation_tab, fundamental_tab, backtest_tab, demo_tab = st.tabs([
+price_tab, valuation_tab, fundamental_tab, backtest_tab, exploratory_tab, demo_tab = st.tabs([
     "Price Momentum Research", "Sector Valuation Research", "Earnings and Quality",
-    "Sector Rotation Backtest", "Synthetic Demo",
+    "Sector Rotation Backtest", "Price-only Exploratory Research", "Synthetic Demo",
 ])
 with price_tab:
     show_price_research()
@@ -176,5 +178,8 @@ with fundamental_tab:
     show_fundamental_research(ROOT / "data" / "earnings_quality")
 with backtest_tab:
     show_backtest_research(MARKET)
+with exploratory_tab:
+    private_root = os.environ.get("SECTORLAB_PRICE_ONLY_DIR")
+    show_price_only_research(Path(private_root) if private_root else None, ROOT)
 with demo_tab:
     show_synthetic_demo()
