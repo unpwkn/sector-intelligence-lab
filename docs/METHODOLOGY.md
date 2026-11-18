@@ -2,7 +2,7 @@
 
 ## Scope and hypotheses
 
-Universe: 11 Sector SPDR proxies; comparator SPY. Monthly decisions are the intended research unit, with execution no earlier than the next tradable session after data becomes available. An *as-of* snapshot includes only items whose `available_at` is no later than the timestamp of the signal. The current scaffold calculates one end-of-month snapshot from synthetic data; historical live evaluation is not implemented.
+Universe: 11 Sector SPDR proxies; comparator SPY. Monthly decisions are the intended research unit, with execution no earlier than the next tradable session after data becomes available. An *as-of* snapshot includes only items whose `available_at` is no later than the timestamp of the signal. The full scoring pipeline calculates one end-of-month snapshot from synthetic data. Phase 2 also calculates retrospective price-only diagnostics from a single retrieved vendor snapshot.
 
 ## Valuation V (0-100)
 
@@ -34,6 +34,69 @@ RS_3M = ln(P_sector[t]/P_sector[t-63]) - ln(P_SPY[t]/P_SPY[t-63])
 Code uses -22, -127, -253 and -1, -64 zero-based position indices, equivalent to the above when t is the last row. Each value is ranked within the 11-sector universe to a 0-100 cross-sectional percentile. `breadth` is a separately supplied, point-in-time constituent-level value between 0 and 1. M = 35% RS6-1 + 35% RS12-1 + 15% RS3M + 15% breadth score. No complete momentum score without breadth.
 
 **Caveat:** Relative rank is a cross-section comparison, not a standardized historical z-score or an objective expected return. Three-month momentum includes the current month, while 6-1 and 12-1 omit the latest month intentionally. This is a testable candidate design, not a proven optimum.
+
+## Price Momentum Score (Phase 2)
+
+The price-only engine uses the snapshot's USD `adjusted_price_proxy` for
+each ETF and SPY. For a signal session `t` the components are:
+
+```
+RS_6_1  = ln(P_sector[t-21] / P_sector[t-126]) - ln(P_SPY[t-21] / P_SPY[t-126])
+RS_12_1 = ln(P_sector[t-21] / P_sector[t-252]) - ln(P_SPY[t-21] / P_SPY[t-252])
+RS_3M   = ln(P_sector[t] / P_sector[t-63])     - ln(P_SPY[t] / P_SPY[t-63])
+```
+
+**Calendar and signal date.** The index is the complete expected XNYS session
+grid within the snapshot's inclusive requested bounds, shared by all 12
+instruments. `t` is the session labeled by `signal_date`, an exchange-local
+YYYY-MM-DD date measured using that session's closing observation for 3M.
+Offsets count exchange sessions backwards with `t-0 = t`. Holidays and weekends
+have no slots. Zero-price-coverage sessions keep their slots. The two skip-month
+measures end at `t-21` and span 105 and 231 session intervals, respectively.
+The 3M measure spans 63 session intervals. With an inclusive `asof` cutoff,
+the latest row is the last snapshot session on or before that date, even when
+prices are missing. A cutoff before the snapshot yields no rows.
+
+**Component coverage.** Both ETFs must have a valid observation on every
+session of the component's inclusive interval. Missing endpoints and interior
+gaps both yield `missing_observations`. If the start endpoint falls before the
+snapshot or the sector's first ETF session, the component is marked
+`insufficient_history`. The earliest 3M, 6–1 and 12–1 components need 64,
+127 and 253 session slots, respectively, counting the signal session. The
+engine retains the 11 sector rows and reports valid shorter windows even
+when the composite is unavailable. Prices are never filled.
+
+**Cross-sectional score.** At each date let `N` count the sectors with all
+three components. The same `N` eligible peers enter each component rank.
+SPY is used only as the benchmark. With ascending ranks and average ranks
+for ties, convert each to a 0–100 percentile and combine:
+
+```
+percentile(component) = 100 * (rank(component) - 1) / (N - 1)
+Price Momentum Score = 0.40 * percentile(RS_6_1)
+                     + 0.40 * percentile(RS_12_1)
+                     + 0.20 * percentile(RS_3M)
+```
+
+An ineligible sector or a cross-section with fewer than two eligible sectors
+receives `insufficient_data` and a missing composite score and rank. Final
+ranks descend by score after rounding to 12 decimal places, with the same best
+rank assigned to ties. Because
+eligible peers can change with inception and coverage, a sector's score can
+move when the peer set changes. Weights are research hypotheses. The full
+Momentum M above still uses breadth and its existing weighting.
+
+**Relative performance.** The dashboard expresses the three log components in
+log percentage points. Its 3M performance column uses
+`100 * (exp(RS_3M) - 1)`, the percentage change in the sector-to-SPY adjusted
+price ratio. This is the ratio of their price growth factors minus one.
+
+**Historical scope.** Session labels later than `t` cannot affect that
+session's signal or cross-sectional ranks. All observations still come from
+the saved retrieval vintage. Later vendor corrections or adjustments can be
+embedded in past prices. The retrieved data do not establish point-in-time
+availability, verified total returns, executable signals, or investment
+performance. See [Market Data](MARKET_DATA.md) for provenance and reproduction.
 
 ## Earnings revisions E (0-100)
 

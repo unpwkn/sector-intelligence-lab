@@ -2,7 +2,7 @@
 
 **A reproducible, research-first framework for US equity sector valuation and rotation.**
 
-> **Status: Research scaffold v0.1.0.** The included demo data are **100% synthetic**. Phase 1 adds optional local real-price ingestion, separate from demo scoring. The output is a software demonstration, **not** measured ETF mispricing, an investment signal, or a backtest. No outperformance is claimed.
+> **Status: Research scaffold v0.1.0.** The included demo is **100% synthetic**. Phase 2 computes retrospective price momentum from optional local ETF snapshots. Empirical performance and live vendor data remain unvalidated.
 
 ## The research question
 
@@ -19,6 +19,7 @@ Can sector-specific historical valuation, relative-price strength, earnings-esti
 | Model | Purpose | Default output |
 |---|---|---|
 | Valuation | Historical cheapness using sector-specific multiples | V: 0–100 |
+| Price Momentum | Rank 6–1, 12–1 and 3M adjusted-price momentum versus SPY | 0–100, price research tab |
 | Momentum | Relative 6–1, 12–1 and 3M momentum, plus breadth | M: 0–100 |
 | Revision | 1M/3M estimate changes and breadth | E: 0–100 |
 | Quality | Profitability, balance-sheet strength and durability | Q: 0–100 |
@@ -41,6 +42,8 @@ flowchart TD
     F --> G[Opportunity and rotation classification]
     G --> H[Dashboard and reproducible snapshots]
     G --> I[Future: point-in-time backtests]
+    J[Verified local ETF price snapshots] --> K[XNYS-aligned price-only relative momentum]
+    K --> H
 ```
 
 ## Run the synthetic demo
@@ -66,17 +69,42 @@ The demo generator fixes the random seed and provides approximately 10 years of 
 The independent ingestion module supports all 11 sector ETFs and SPY through
 Alpha Vantage's documented Daily Adjusted API. It requires a premium API key,
 validates exchange-session coverage and saves local, Git-ignored snapshots.
-Adjusted close is an **adjusted-price proxy, not verified total return**.
+The vendor adjusted close is labeled **adjusted_price_proxy**. Total returns remain unverified.
 
 ```bash
 # Install dependencies as above; supply ALPHAVANTAGE_API_KEY via your environment.
-python scripts/ingest_market_data.py --start 2024-01-02 --end 2024-12-31 --snapshot av-2024-v1
+python scripts/ingest_market_data.py --start 2023-01-03 --end 2024-12-31 --snapshot av-2023-2024-v1
 ```
 
 See [Market data instructions and schema](docs/MARKET_DATA.md) for access, licensing,
 calendar and corporate-action limitations, reproducibility, and offline tests.
-The synthetic demo and scoring runner keep their existing inputs and behavior.
-No historical valuation or estimate-revision proxies are introduced.
+## Run Price Momentum Research (Phase 2)
+
+Place an intact Phase 1 snapshot under `data/market/`. Start the app with
+`streamlit run app.py`, then select the snapshot and a signal session in the
+**Price Momentum Research** tab. A covered 12–1 window requires at least 253
+exchange sessions in the snapshot. The tab shows sector ranks, the 6–1, 12–1
+and 3M components, relative performance versus SPY, historical scores, and
+coverage and provenance. It works independently of the **Synthetic Demo** tab.
+
+To reproduce the results offline from a saved snapshot, install `.[dev,app]`
+as above and run the following from the repository root:
+
+```python
+from sectorlab.market_data import load_snapshot
+from sectorlab.price_momentum import price_momentum_history
+
+snapshot = load_snapshot("data/market/av-2023-2024-v1")
+history = price_momentum_history(snapshot, asof="2024-12-31")
+latest = history.loc[history["signal_date"] == history["signal_date"].max()]
+print(latest.sort_values("price_momentum_rank").to_string(index=False))
+```
+
+Use the same files and package versions to reproduce the signal history.
+`pytest -q` uses fictional inputs and requires no API key. See
+[Methodology](docs/METHODOLOGY.md#price-momentum-score-phase-2) for formulas,
+eligibility, and the distinction between the price-only score and breadth-based
+Momentum. The price research tab publishes only price-derived metrics.
 
 ## What has and has not been built
 
@@ -85,6 +113,7 @@ No historical valuation or estimate-revision proxies are introduced.
 - [x] Relative-price momentum, cross-sectional revision ranking and quality aggregation.
 - [x] Deterministic synthetic example, interactive viewer and basic unit tests.
 - [x] Modular real-price ingestion, local provenance snapshots and mocked provider tests.
+- [x] Snapshot-verified sector momentum rankings and retrospective signal history.
 - [ ] Validated point-in-time histories of ETF holdings, estimates and sector fundamentals.
 - [ ] Constituent-level and subindustry valuation aggregation; historical relative P/E spread.
 - [ ] Data lineage and production-grade backfill/revision controls.
@@ -98,7 +127,7 @@ No historical valuation or estimate-revision proxies are introduced.
 3. Adjusted price is not necessarily identical to a validated dividend-reinvested total-return index.
 4. Sector averages require careful treatment of banks, insurers, cyclicals and REITs.
 5. Cross-sector ranks are *relative rankings*, not calibrated probabilities.
-6. Real-price ingestion is optional and requires vendor access; no downloaded data, validated total returns or empirical return claims are supplied.
+6. Real-price ingestion requires vendor access. Historical diagnostics use one retrieved vintage, which can include later adjustments and corrections.
 
 See [Methodology](docs/METHODOLOGY.md), [Data policy](docs/DATA_POLICY.md), and [Roadmap](docs/ROADMAP.md).
 
