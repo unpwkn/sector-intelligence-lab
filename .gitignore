@@ -32,5 +32,6 @@ Thumbs.db
 
 # Local vendor snapshots and build/scratch artifacts
 data/market/
+data/valuation/
 *.egg-info/
 work/

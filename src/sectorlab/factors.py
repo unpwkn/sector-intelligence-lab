@@ -5,8 +5,7 @@ All numeric outputs in the demo are SYNTHETIC. This module does not fetch data.
 
 from __future__ import annotations
 
-import math
-from typing import Mapping
+from collections.abc import Mapping
 
 import numpy as np
 import pandas as pd
@@ -23,6 +22,7 @@ from .config import (
     SECTORS,
     VALUATION_METRICS,
 )
+from .valuation import normalize_valuation
 
 
 def robust_value_score(
@@ -37,17 +37,10 @@ def robust_value_score(
     1.4826 * MAD estimates standard deviation under a normal distribution.
     Return NaN rather than invent a score for insufficient history/zero MAD.
     """
-    history = pd.Series(prior_values, dtype="float64").replace([np.inf, -np.inf], np.nan).dropna()
-    if len(history) < min_periods or not math.isfinite(float(value)):
-        return float("nan")
-    median = float(history.median())
-    mad = float((history - median).abs().median())
-    if mad <= 1e-12:
-        return float("nan")
-    z = float(np.clip((float(value) - median) / (1.4826 * mad), -3, 3))
-    if not higher_is_cheap:
-        z = -z
-    return float(np.clip(50 + 15 * z, 5, 95))
+    result = normalize_valuation(
+        float(value), prior_values, higher_is_cheap=higher_is_cheap, min_periods=min_periods,
+    )
+    return 50 + 15 * result.attractiveness_z
 
 
 def valuation_scores(

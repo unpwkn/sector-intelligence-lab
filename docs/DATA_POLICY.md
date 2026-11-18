@@ -4,7 +4,22 @@
 
 The `make_demo_data.py` generator writes fictional price, valuation, breadth, quality and estimate-revision values. They may resemble market-like series, but they **are not observations from the securities named in the project**. The names, dates and tickers are for software testing only. No portfolio-performance charts, investor-facing results, fair-value conclusions or alpha claims may be drawn from them.
 
-## Full scoring pipeline CSV contracts
+## Historical valuation research (Phase 3)
+
+Use the separate [Phase 3 valuation contract](VALUATION_DATA.md) for real or synthetic valuation
+research. It records the observation and original release instants, earliest availability, fiscal
+basis, definition, vendor, source, row provenance and permitted distribution class. A file
+contains one history type. Declared point-in-time inputs remain subject to source audit.
+Modern reconstructed histories can be viewed as raw historical observations after publication
+and carry no historical scores. The [data feasibility report](DATA_FEASIBILITY.md) records which
+source routes supply usable inputs and where the long-history gaps remain.
+
+Keep restricted CSV exports and source evidence outside Git or in ignored `data/valuation/`.
+Use the app on a trusted local machine for private files. Shared deployments and publication of
+derived outputs require applicable rights. The repository ships the schema and an explicitly
+synthetic fixture generator.
+
+## Legacy full scoring pipeline CSV contracts
 
 All records must include both the date they describe and the first time they were available for investment decisions (`available_at`). Only `available_at <= signal_date` may enter a signal. The current implementation uses date-level rather than intraday time-level gating and is not execution-ready.
 
@@ -41,7 +56,11 @@ Never commit API credentials, unlicensed proprietary extracts, client/portfolio 
 
 ## Coverage gates
 
-The roadmap calls for 48+ monthly valuation references, 80%+ constituent weight coverage, two or more economically relevant valuation metrics, stale-data checks and missingness flags. The v0.1 code implements a subset: 48 historical samples, three required valuation proxy metrics per sector, a 45-day staleness gate, and no imputation. It does not yet implement total coverage audits or a full standardized confidence score.
+The valuation research engine needs 48 valid prior calendar months within an 84-month
+window, a fresh current observation and valid denominators. It reports coverage by metric and
+requires the full three-metric set for a historical sector score. Benchmark pair counts are
+tracked separately. Underlying constituent coverage and timing confidence remain a source-audit
+responsibility. The roadmap's 80% constituent weight coverage gate requires upstream evidence.
 
 ## Known source limitations
 

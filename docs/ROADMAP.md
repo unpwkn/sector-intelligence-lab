@@ -8,24 +8,35 @@
 - [x] Synthetic data generator, tests, CLI and Streamlit demonstration.
 - [x] Source policy / methodology documentation.
 
-## Phase 1: independent public-data MVP
+## Phase 1 — ETF market data
 
-- [ ] Price provider adapter with date alignment, dividends and corporate actions.
+- [x] Price provider adapter with date alignment, dividends and corporate actions.
 - [ ] Daily automated fetch into immutable raw snapshots (no public redistribution restrictions violated).
 - [ ] Research-grade market breadth from historical available constituent snapshots.
 - [ ] Current ETF characteristics on dashboard clearly labeled as *not* backtestable PIT history.
 - [ ] Screenshot and public GitHub README demo image.
 - [ ] Publish practical research blog describing why cheapness differs from rotation.
 
-## Phase 2: point-in-time institutional research
+## Phase 2 — Sector price momentum
+
+- [x] Snapshot-backed price momentum and relative strength versus SPY.
+- [x] Independent Momentum Research dashboard and coverage diagnostics.
+
+## Phase 3 — Sector valuation and historical normalization
+
+- [x] Valuation CSV contract with data vintages and provenance.
+- [x] Historical sector valuation, comparable SPY premiums and spreads, and offline research tab.
+- [x] [Source feasibility and licensing review](DATA_FEASIBILITY.md).
+- [ ] Audit real exports and test constituent coverage, denominator construction and paired SPY data.
+
+## Future institutional data research
 
 - [ ] PIT holdings and analyst EPS estimate histories.
 - [ ] Sector / subindustry financial denominator normalization.
-- [ ] Two-layer relative-to-market valuation residual model.
 - [ ] Production data lineage, correction timestamps and coverage dashboard.
 - [ ] Quarterly revalidation of source definitions and sector mappings.
 
-## Phase 3: honest empirical testing
+## Future empirical testing
 
 - [ ] Pre-register hypotheses and compare simple baselines.
 - [ ] 3/6/12M forward excess-return tests; rank IC and confidence intervals.

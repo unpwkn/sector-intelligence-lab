@@ -1,7 +1,8 @@
 """Create a synthetic static preview for README, with a visible warning."""
 from pathlib import Path
-import pandas as pd
+
 import matplotlib.pyplot as plt
+import pandas as pd
 
 root = Path(__file__).resolve().parents[1]
 path = root / "data" / "processed" / "signals.csv"

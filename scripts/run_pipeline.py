@@ -5,8 +5,11 @@ from pathlib import Path
 import pandas as pd
 
 from sectorlab.factors import (
-    combine_signals, momentum_scores, quality_scores,
-    revision_scores, valuation_scores,
+    combine_signals,
+    momentum_scores,
+    quality_scores,
+    revision_scores,
+    valuation_scores,
 )
 
 ROOT = Path(__file__).resolve().parents[1]

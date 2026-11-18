@@ -26,7 +26,10 @@ Can sector-specific historical valuation, relative-price strength, earnings-esti
 | Opportunity | Prioritize diligence, not place trades | `0.40V + 0.25M + 0.20E + 0.15Q` |
 | Rotation | Strength of market and fundamental confirmation | `0.55M + 0.45E` |
 
-Historical valuation uses a **past-only, median/MAD-based robust Z-score** with an 84-month reference window and a 48-month minimum. High valuation multiples are directionally reversed; cash-flow yields are not. Missing pillars do not become neutral scores.
+Sector Valuation Research uses a past-only median/MAD robust Z-score with an
+84-calendar-month reference window and a 48-month minimum. Lower multiples and
+higher yields imply higher attractiveness. The optional SPY comparison needs
+compatible point-in-time observations.
 
 ### Architecture
 
@@ -106,6 +109,21 @@ Use the same files and package versions to reproduce the signal history.
 eligibility, and the distinction between the price-only score and breadth-based
 Momentum. The price research tab publishes only price-derived metrics.
 
+## Run Sector Valuation Research (Phase 3)
+
+Open **Sector Valuation Research** in `streamlit run app.py`. Choose
+**Import local CSV** for a validated export or **Synthetic demonstration** for
+fictional data. Select a sector, metric and as-of date to view valuation
+history, robust Z-scores, attractiveness scores, percentiles, and coverage.
+Forward P/E and dividend yield can be compared to SPY when observations and
+definitions align. The historical, relative and 70/30 scores appear separately.
+This tab works independently of Price Momentum Research and the legacy synthetic demo.
+
+The [CSV contract](docs/VALUATION_DATA.md) covers private storage, reproducible
+Python usage and validation. See the [data feasibility report](docs/DATA_FEASIBILITY.md)
+for the source review. A licensed original-vintage market dataset is still required
+to run and validate real valuation histories.
+
 ## What has and has not been built
 
 - [x] Eleven-sector coverage, configurable metric weights and investor-readable classifications.
@@ -115,7 +133,8 @@ Momentum. The price research tab publishes only price-derived metrics.
 - [x] Modular real-price ingestion, local provenance snapshots and mocked provider tests.
 - [x] Snapshot-verified sector momentum rankings and retrospective signal history.
 - [ ] Validated point-in-time histories of ETF holdings, estimates and sector fundamentals.
-- [ ] Constituent-level and subindustry valuation aggregation; historical relative P/E spread.
+- [x] Valuation CSV import, provenance and replay, sector-specific scores and comparable SPY premiums.
+- [ ] Constituent-level and subindustry valuation aggregation.
 - [ ] Data lineage and production-grade backfill/revision controls.
 - [ ] Leakage-free walk-forward 3/6/12-month excess-return backtests, costs and robustness checks.
 - [ ] Deployed public live-data dashboard and a research findings page.
@@ -141,6 +160,7 @@ sector-intelligence-lab/
   data/demo/           # synthetic demo inputs (generated)
   data/processed/      # reproducible signal output (generated)
   data/market/         # local vendor snapshots (generated, Git-ignored)
+  data/valuation/      # private valuation exports (optional, Git-ignored)
   docs/                # methodology, sources, roadmap and resume language
   app.py               # optional Streamlit viewer
   .github/workflows/   # automated pytest checks

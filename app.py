@@ -9,6 +9,7 @@ import streamlit as st
 from sectorlab.config import SECTORS
 from sectorlab.market_data import ValidationError, load_snapshot
 from sectorlab.price_momentum import price_momentum_history
+from sectorlab.valuation_dashboard import show_valuation_research
 
 ROOT = Path(__file__).resolve().parent
 SIGNALS = ROOT / "data" / "processed" / "signals.csv"
@@ -156,8 +157,12 @@ def show_price_research() -> None:
 
 st.set_page_config(page_title="Sector Intelligence Lab", page_icon="📊", layout="wide")
 st.title("Sector Intelligence Lab")
-price_tab, demo_tab = st.tabs(["Price Momentum Research", "Synthetic Demo"])
+price_tab, valuation_tab, demo_tab = st.tabs([
+    "Price Momentum Research", "Sector Valuation Research", "Synthetic Demo",
+])
 with price_tab:
     show_price_research()
+with valuation_tab:
+    show_valuation_research()
 with demo_tab:
     show_synthetic_demo()
