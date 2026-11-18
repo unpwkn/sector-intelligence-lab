@@ -1,7 +1,8 @@
-"""Read a Phase 1 snapshot without requesting or reconstructing vendor data."""
+"""Verify an immutable local ETF price snapshot and its provenance."""
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import io
 import json
@@ -10,7 +11,19 @@ from pathlib import Path
 
 import pandas as pd
 
-from .pipeline import CALENDAR_LABEL, UNIVERSE, ValidationError, _calendar, _date, validate
+from sectorlab.config import ETF_INCEPTION
+
+from .local_csv import CSV_ENDPOINT, CSV_FILE, PROVENANCE_FILE, LocalCsv
+from .pipeline import (
+    CALENDAR_LABEL,
+    UNIVERSE,
+    ValidationError,
+    _calendar,
+    _csv_groups,
+    _date,
+    _research_classification,
+    validate,
+)
 from .providers import FIELDS, _unique_object
 
 PRICE_BASIS = "adjusted_price_proxy"
@@ -25,6 +38,10 @@ class PriceSnapshot:
     sessions: pd.DatetimeIndex
     manifest: dict
     manifest_sha256: str
+
+    @property
+    def research_classification(self) -> str:
+        return _research_classification(self.manifest)
 
 
 def _aware_timestamp(value: object, label: str) -> pd.Timestamp:
@@ -41,8 +58,9 @@ def _aware_timestamp(value: object, label: str) -> pd.Timestamp:
 def _read_snapshot(path: Path) -> PriceSnapshot:
     manifest_bytes = (path / "manifest.json").read_bytes()
     manifest = json.loads(manifest_bytes, object_pairs_hook=_unique_object)
-    if not isinstance(manifest, dict) or manifest.get("schema_version") != "1.0":
-        raise ValidationError("Expected a Phase 1 snapshot manifest (schema 1.0)")
+    if not isinstance(manifest, dict) or manifest.get("schema_version") not in ("1.0", "1.1"):
+        raise ValidationError("Expected a market snapshot manifest (schema 1.0 or 1.1)")
+    local = manifest["schema_version"] == "1.1"
     if (
         manifest.get("universe") != list(UNIVERSE)
         or manifest.get("calendar") != CALENDAR_LABEL
@@ -55,7 +73,7 @@ def _read_snapshot(path: Path) -> PriceSnapshot:
     provider = manifest.get("provider")
     if not isinstance(provider, str) or not provider.strip() or "endpoint" not in manifest:
         raise ValidationError("Missing provider or endpoint metadata")
-    if provider == "alpha_vantage" and manifest["endpoint"] != "TIME_SERIES_DAILY_ADJUSTED":
+    if not local and provider == "alpha_vantage" and manifest["endpoint"] != "TIME_SERIES_DAILY_ADJUSTED":
         raise ValidationError("Unexpected Alpha Vantage endpoint")
     versions = manifest.get("versions")
     if not isinstance(versions, dict) or any(
@@ -84,16 +102,40 @@ def _read_snapshot(path: Path) -> PriceSnapshot:
             raise ValidationError(f"Retrieval for {ticker} must fall between close and creation")
 
     hashes = manifest.get("sha256")
-    raw_files = [f"raw/{ticker}.json" for ticker in UNIVERSE]
+    raw_files = [CSV_FILE, PROVENANCE_FILE] if local else [f"raw/{ticker}.json" for ticker in UNIVERSE]
     if not isinstance(hashes, dict) or set(hashes) != {"prices.csv", *raw_files}:
         raise ValidationError("Expected checksums for prices.csv and every raw response")
     price_bytes = (path / "prices.csv").read_bytes()
     if hashlib.sha256(price_bytes).hexdigest() != hashes["prices.csv"]:
         raise ValidationError("Checksum mismatch for prices.csv")
-    for name in raw_files:
-        with (path / name).open("rb") as raw:
-            if hashlib.file_digest(raw, "sha256").hexdigest() != hashes[name]:
+    if local:
+        evidence = {}
+        for name in raw_files:
+            evidence[name] = (path / name).read_bytes()
+            if hashlib.sha256(evidence[name]).hexdigest() != hashes[name]:
                 raise ValidationError(f"Checksum mismatch for {name}")
+        source = LocalCsv.parse(evidence[CSV_FILE], evidence[PROVENANCE_FILE])
+        timestamp = pd.Timestamp(source.retrieved_at).isoformat()
+        if (
+            manifest["endpoint"] != CSV_ENDPOINT
+            or manifest.get("provenance") != source.provenance
+            or manifest.get("fund_inception") != ETF_INCEPTION
+            or provider != source.provenance["source"]
+            or any(value != timestamp for value in retrievals.values())
+        ):
+            raise ValidationError("Snapshot metadata disagree with CSV provenance or fund inception")
+        raw_groups = _csv_groups(source)
+    else:
+        for name in raw_files:
+            with (path / name).open("rb") as raw:
+                if hashlib.file_digest(raw, "sha256").hexdigest() != hashes[name]:
+                    raise ValidationError(f"Checksum mismatch for {name}")
+
+    classification = _research_classification(manifest)
+    if (local or "research_classification" in manifest) and (
+        manifest.get("research_classification") != classification
+    ):
+        raise ValidationError("Invalid snapshot research classification")
 
     prices = pd.read_csv(
         io.BytesIO(price_bytes),
@@ -102,7 +144,7 @@ def _read_snapshot(path: Path) -> PriceSnapshot:
         keep_default_na=False,
     )
     if list(prices.columns) != FIELDS + METADATA_COLUMNS or prices.empty:
-        raise ValidationError("Invalid Phase 1 prices.csv schema or empty snapshot")
+        raise ValidationError("Invalid prices.csv schema or empty snapshot")
     if not prices["ticker"].isin(UNIVERSE).all() or prices.duplicated(["date", "ticker"]).any():
         raise ValidationError("Unexpected ticker or duplicate price observation")
     expected_metadata = {
@@ -119,13 +161,30 @@ def _read_snapshot(path: Path) -> PriceSnapshot:
     # Reuse Phase 1's market-data checks and compare the actual gaps with the manifest.
     prices_by_ticker = {ticker: rows for ticker, rows in prices.groupby("ticker")}
     for ticker in UNIVERSE:
-        _, actual = validate(
+        normalized, actual = validate(
             prices_by_ticker.get(ticker, prices.iloc[:0]),
             ticker,
             sessions,
             allow_missing=manifest["allow_missing"],
         )
-        actual.pop("exact_duplicates_removed")  # Original count is known only at ingestion.
+        if local:
+            replayed, actual = validate(
+                raw_groups.get(ticker, source.records.iloc[:0]),
+                ticker,
+                sessions,
+                allow_missing=manifest["allow_missing"],
+            )
+            try:
+                pd.testing.assert_frame_equal(
+                    normalized.reset_index(drop=True),
+                    replayed.reset_index(drop=True),
+                    check_dtype=False,
+                    check_exact=True,
+                )
+            except AssertionError:
+                raise ValidationError(f"Normalized prices disagree with raw CSV for {ticker}") from None
+        else:
+            actual.pop("exact_duplicates_removed")  # Original count is known only at ingestion.
         recorded = coverage[ticker]
         if (
             not isinstance(recorded, dict)
@@ -145,5 +204,5 @@ def load_snapshot(path: str | Path) -> PriceSnapshot:
         return _read_snapshot(Path(path))
     except ValidationError:
         raise
-    except (OSError, ValueError, TypeError, OverflowError) as exc:
-        raise ValidationError(f"Cannot read Phase 1 snapshot: {exc}") from exc
+    except (csv.Error, OSError, ValueError, TypeError, OverflowError) as exc:
+        raise ValidationError(f"Cannot read market snapshot: {exc}") from exc

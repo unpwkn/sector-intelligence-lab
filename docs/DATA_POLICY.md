@@ -42,16 +42,18 @@ For production, extend each row with provider, observation timestamp/time zone, 
 
 ## ETF snapshots and price research
 
-Optional real-price ingestion now uses Alpha Vantage's documented premium Daily
-Adjusted API for the 11 sector ETFs and SPY. See [MARKET_DATA.md](MARKET_DATA.md)
-for reproducible commands, licensing/access limitations, validation rules and the
-v1.0 local schema. Snapshots live separately in ignored `data/market/` directories.
-They retain reported corporate actions and mark adjusted close as a proxy;
+Optional real-price ingestion supports a licensed [local CSV export](HISTORICAL_DATA.md)
+or the [Alpha Vantage premium Daily Adjusted API](MARKET_DATA.md) for the 11 sector
+ETFs and SPY. Save source evidence, snapshots and reports in private storage or
+ignored `data/market/` and `work/`. Research rights, retention rights, and
+permission to share source data or derived outputs depend on the vendor agreement.
+The repository license applies to project code and does not confer third-party data rights.
+
+Snapshots retain reported corporate actions and label adjusted close as a proxy.
 `total_return_verified` and `point_in_time_history` are false. Retrieval timestamps
-are not historical `available_at` timestamps. Price Momentum Research verifies
-these local snapshots and uses their normalized adjusted-price proxies for
-retrospective sector-to-SPY diagnostics. The research tab reports price-derived
-metrics. The synthetic demo uses the full scoring contracts above.
+record the acquired vintage. Price Momentum Research and Phase 5 read the verified
+local snapshots for retrospective price-only research. The synthetic demo uses the
+full scoring contracts above.
 
 ## Suggested real-data path
 

@@ -10,6 +10,7 @@ from sectorlab.backtest.dashboard import show_backtest_research
 from sectorlab.config import SECTORS
 from sectorlab.fundamental_research.dashboard import show_fundamental_research
 from sectorlab.market_data import ValidationError, load_snapshot
+from sectorlab.market_data.pipeline import SYNTHETIC
 from sectorlab.price_momentum import price_momentum_history
 from sectorlab.valuation_dashboard import show_valuation_research
 
@@ -58,7 +59,7 @@ def show_synthetic_demo() -> None:
 
 def show_price_research() -> None:
     st.caption(
-        "Local Phase 1 price snapshots use the vendor's adjusted_price_proxy. "
+        "Local snapshots use an adjusted-price proxy for price momentum. "
         "Total returns and historical data availability are unverified."
     )
     snapshots = (
@@ -78,6 +79,10 @@ def show_price_research() -> None:
         return
 
     manifest = snapshot.manifest
+    if snapshot.research_classification == SYNTHETIC:
+        st.error("SYNTHETIC OFFLINE FIXTURE — fictional prices.")
+    else:
+        st.caption("Retrospective adjusted-price research")
     st.caption(f"Snapshot provider: {manifest['provider']}")
     signal_dates = snapshot.sessions.strftime("%Y-%m-%d").tolist()
     signal_date = st.selectbox("Signal session (XNYS)", signal_dates, index=len(signal_dates) - 1)
@@ -143,7 +148,7 @@ def show_price_research() -> None:
         )
         st.caption(
             f"Snapshot created {manifest['created_at']}. SHA-256 verified for prices.csv "
-            "and all raw responses."
+            "and raw source evidence."
         )
         st.code(f"Manifest SHA-256 {snapshot.manifest_sha256}")
         coverage = pd.DataFrame.from_dict(manifest["coverage"], orient="index")

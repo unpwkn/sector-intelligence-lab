@@ -15,6 +15,13 @@ SECTORS = {
 }
 BENCHMARK = "SPY"
 
+# Sponsor-reported fund inception can precede the first exchange trading session.
+ETF_INCEPTION = dict.fromkeys(SECTORS, "1998-12-16") | {
+    "SPY": "1993-01-22",
+    "XLRE": "2015-10-07",
+    "XLC": "2018-06-18",
+}
+
 # First trading sessions, not backfilled sector/index history.
 FIRST_SESSION = dict.fromkeys(SECTORS, "1998-12-22") | {
     "SPY": "1993-01-29",

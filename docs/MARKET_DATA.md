@@ -1,7 +1,12 @@
-# Phase 1: real ETF price ingestion
+# ETF price snapshots and Alpha Vantage ingestion
 
 Phase 1 builds the local ETF price snapshots that feed Phase 2 Price Momentum
 Research. The synthetic demo uses its own prices and fundamental inputs.
+
+Phase 6A also imports licensed local CSV exports with exact input-byte preservation
+and replay. See the [provider review and CSV workflow](HISTORICAL_DATA.md) for
+schema 1.1, sponsor inception dates, and EOD refreshes. This page details the
+original Alpha Vantage schema 1.0 route.
 
 ## Source and access
 
@@ -16,7 +21,7 @@ undocumented Yahoo endpoints are used.
 **An API key with premium Daily Adjusted entitlement is required.** A free/demo
 key must not be assumed to provide this endpoint or full history. Check current
 [plans and limits](https://www.alphavantage.co/premium/) before subscribing. Full
-history is vendor-dependent (advertised as 20+ years), not a promise of coverage
+history is vendor-dependent (advertised as 25+ years), not a promise of coverage
 back to ETF inception. Strict coverage validation catches truncated histories.
 All 12 instruments are requested, but upstream entitlements, symbol coverage and
 outages can prevent a download. There is no synthetic fallback.
@@ -115,8 +120,9 @@ Modern adjusted history can incorporate later actions and corrections. Each row
 has `retrieved_at`, deliberately **no historical `available_at`**. Retrieval does
 not prove historical investment availability. Do not copy session dates into
 `available_at` or treat these files as a point-in-time backtest input. The existing
-synthetic pipeline's price contract is separate; Phase 1 does not feed real prices
-into it or fabricate the missing valuation, revision, quality or breadth pillars.
+synthetic pipeline's price contract is separate; The separate Phase 5 engine consumes these snapshots for retrospective
+price-only research. Valuation, revision, quality and breadth inputs are outside
+this price snapshot contract.
 
 ## Local schema v1.0
 
@@ -156,8 +162,8 @@ this can consume disk space and remains subject to vendor licensing.
 
 ## Phase 2 snapshot checks and reproduction
 
-`sectorlab.market_data.load_snapshot(path)` requires the v1.0 manifest and the
-complete set of checksummed files. It verifies SHA-256 for the normalized CSV
+`sectorlab.market_data.load_snapshot(path)` supports both snapshot schemas. For
+v1.0 it requires the manifest and the complete set of checksummed files. It verifies SHA-256 for the normalized CSV
 and every raw JSON response, reads the normalized data from the verified bytes,
 and checks schema, universe, currency, price basis, retrieval metadata, and
 per-ticker coverage against the XNYS session grid. The raw files stay with the

@@ -68,23 +68,27 @@ The demo generator fixes the random seed and provides approximately 10 years of 
 
 **Real-data inputs:** See [`docs/DATA_POLICY.md`](docs/DATA_POLICY.md) for CSV schemas and the requirements for *true* point-in-time sourcing. The package does **not** include an unlicensed data feed or assert that web-scraped historical valuation is accurate.
 
-## Ingest real ETF prices (Phase 1)
+## Ingest historical daily ETF prices (Phases 1 and 6A)
 
-The independent ingestion module supports all 11 sector ETFs and SPY through
-Alpha Vantage's documented Daily Adjusted API. It requires a premium API key,
-validates exchange-session coverage and saves local, Git-ignored snapshots.
-The vendor adjusted close is labeled **adjusted_price_proxy**. Total returns remain unverified.
+Import licensed daily prices for the 11 US sector ETFs and SPY using a local CSV.
+The importer validates listing dates, trading sessions, price and action fields,
+and preserves the original input and provenance with SHA-256 checksums.
 
 ```bash
-# Install dependencies as above; supply ALPHAVANTAGE_API_KEY via your environment.
-python scripts/ingest_market_data.py --start 2023-01-03 --end 2024-12-31 --snapshot av-2023-2024-v1
+python scripts/ingest_market_data.py --csv work/prices.csv \
+  --provenance work/provenance.json --start 2023-01-03 --end 2024-12-31 \
+  --snapshot historical-2024-v1
 ```
 
-See [Market data instructions and schema](docs/MARKET_DATA.md) for access, licensing,
-calendar and corporate-action limitations, reproducibility, and offline tests.
+The existing Alpha Vantage route uses the documented premium Daily Adjusted API.
+Both routes save Git-ignored snapshots under `data/market/`. See the
+[provider comparison, CSV schema and EOD workflow](docs/HISTORICAL_DATA.md) and
+[Alpha Vantage instructions](docs/MARKET_DATA.md). Phase 6A verified the workflow
+with fictional prices. Real coverage remains unverified pending a licensed export.
+
 ## Run Price Momentum Research (Phase 2)
 
-Place an intact Phase 1 snapshot under `data/market/`. Start the app with
+Place an intact market snapshot under `data/market/`. Start the app with
 `streamlit run app.py`, then select the snapshot and a signal session in the
 **Price Momentum Research** tab. A covered 12–1 window requires at least 253
 exchange sessions in the snapshot. The tab shows sector ranks, the 6–1, 12–1
@@ -151,9 +155,10 @@ python scripts/run_backtest.py --fixture --output work/phase5-common
 Phase 5 compares SPY buy and hold, equal-weight sectors, and the Phase 2 top-three
 and top-five portfolios. It validates local price snapshots and exports signals,
 next-session-close trades, gross and net returns, and aligned performance metrics.
-The default research universe requires all 11 sectors to be eligible. Real
-Phase 1 snapshots carry the `RETROSPECTIVE_ADJUSTED_PRICE_PROXY` label, and the
-offline fixture is fictional. The Streamlit **Sector Rotation Backtest** tab
+The default research universe requires all 11 sectors to be eligible. Use
+`--snapshot data/market/historical-2024-v1` in place of `--fixture` to run a
+saved snapshot. Real-price runs carry the `RETROSPECTIVE_ADJUSTED_PRICE_PROXY`
+label. Historical point-in-time availability and total returns remain unverified. The Streamlit **Sector Rotation Backtest** tab
 runs the same comparison on saved local snapshots. See [Phase 5 backtesting](docs/BACKTESTING.md).
 
 ## What has and has not been built
