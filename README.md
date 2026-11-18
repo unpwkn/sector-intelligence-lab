@@ -2,7 +2,7 @@
 
 **A reproducible, research-first framework for US equity sector valuation and rotation.**
 
-> **Status: Research scaffold v0.1.0.** The included demo is **100% synthetic**. Phase 2 computes retrospective price momentum from optional local ETF snapshots. Empirical performance and live vendor data remain unvalidated.
+> **Status: Research scaffold v0.1.0.** The included demo is **100% synthetic**. Separate research views cover price momentum, sector valuation, earnings revisions and fundamental quality. Empirical performance and live vendor data remain unvalidated.
 
 ## The research question
 
@@ -124,6 +124,23 @@ Python usage and validation. See the [data feasibility report](docs/DATA_FEASIBI
 for the source review. A licensed original-vintage market dataset is still required
 to run and validate real valuation histories.
 
+## Run Earnings and Quality Research (Phase 4)
+
+Run `streamlit run app.py`, open **Earnings and Quality**, and choose **Synthetic
+fixture** for the offline example across all 11 sector ETFs. The three views show
+Earnings Revision Research, Fundamental Quality Research, and Sector Coverage and
+Source Confidence. For local data, place validated CSVs under the ignored
+`data/earnings_quality/` directory and select a timestamp with a UTC offset.
+
+Earnings uses matched analyst EPS vintages and recommendation breadth. Quality
+uses issuer-level ratios and subindustry definitions for profitability, financial
+strength and growth durability. Both require sufficient historical ETF weight
+coverage and expose missing inputs. The real-data Opportunity Score remains inactive.
+
+- [Phase 4 source feasibility](docs/PHASE4_FEASIBILITY.md)
+- [Phase 4 CSV contract and offline API](docs/EARNINGS_QUALITY_DATA.md)
+- [Phase 4 methodology and limitations](docs/METHODOLOGY.md#earnings-revision-and-fundamental-quality-research-phase-4)
+
 ## What has and has not been built
 
 - [x] Eleven-sector coverage, configurable metric weights and investor-readable classifications.
@@ -162,6 +179,7 @@ sector-intelligence-lab/
   data/market/         # local vendor snapshots (generated, Git-ignored)
   data/valuation/      # private valuation exports (optional, Git-ignored)
   docs/                # methodology, sources, roadmap and resume language
+  data/earnings_quality/ # private earnings and quality bundles (optional, Git-ignored)
   app.py               # optional Streamlit viewer
   .github/workflows/   # automated pytest checks
 ```

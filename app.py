@@ -7,6 +7,7 @@ import plotly.express as px
 import streamlit as st
 
 from sectorlab.config import SECTORS
+from sectorlab.fundamental_research.dashboard import show_fundamental_research
 from sectorlab.market_data import ValidationError, load_snapshot
 from sectorlab.price_momentum import price_momentum_history
 from sectorlab.valuation_dashboard import show_valuation_research
@@ -157,12 +158,14 @@ def show_price_research() -> None:
 
 st.set_page_config(page_title="Sector Intelligence Lab", page_icon="📊", layout="wide")
 st.title("Sector Intelligence Lab")
-price_tab, valuation_tab, demo_tab = st.tabs([
-    "Price Momentum Research", "Sector Valuation Research", "Synthetic Demo",
+price_tab, valuation_tab, fundamental_tab, demo_tab = st.tabs([
+    "Price Momentum Research", "Sector Valuation Research", "Earnings and Quality", "Synthetic Demo",
 ])
 with price_tab:
     show_price_research()
 with valuation_tab:
     show_valuation_research()
+with fundamental_tab:
+    show_fundamental_research(ROOT / "data" / "earnings_quality")
 with demo_tab:
     show_synthetic_demo()
